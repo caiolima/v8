@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "src/heap/heap.h"
+#include "src/heap/memory-chunk-inl.h"
 #include "src/heap/spaces.h"
 
 namespace v8 {
@@ -168,6 +169,21 @@ PauseAllocationObserversScope::PauseAllocationObserversScope(Heap* heap)
 PauseAllocationObserversScope::~PauseAllocationObserversScope() {
   heap_->pause_allocation_observers_depth_--;
   heap_->allocator()->ResumeAllocationObservers();
+}
+
+void TotalAllocationTracker::Step(int bytes_allocated, Address soon_object,
+                                  size_t size) {
+  const char* space_name = "unknown";
+
+  if (soon_object != kNullAddress) {
+    AllocationSpace space_id = MemoryChunkMetadata::FromAddress(soon_object)->owner_identity();
+    space_name = ToString(space_id);
+  }
+
+  PrintF("Allocation: %zu bytes at %p in %s\n", size, reinterpret_cast<void*>(soon_object), space_name);
+
+  // Track the allocation size
+  total_bytes_allocated_.fetch_add(size, std::memory_order_relaxed);
 }
 
 }  // namespace internal

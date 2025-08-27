@@ -5,9 +5,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 #include "include/libplatform/libplatform.h"
 #include "include/v8-context.h"
+#include "include/v8-function.h"
 #include "include/v8-initialization.h"
 #include "include/v8-isolate.h"
 #include "include/v8-local-handle.h"
@@ -72,12 +76,37 @@ void PrintAllocationProfile(v8::AllocationProfile* profile) {
   traverse(root, 0);
 }
 
+// Helper function to read file contents
+std::string ReadFile(const char* filename) {
+  std::ifstream file(filename);
+  if (!file.is_open()) {
+    std::cerr << "Error: Could not open file " << filename << std::endl;
+    return "";
+  }
+
+  std::ostringstream content;
+  content << file.rdbuf();
+  file.close();
+
+  return content.str();
+}
+
 int main(int argc, char* argv[]) {
+  // Check if JavaScript file was provided
+  if (argc < 2) {
+    std::cerr << "Usage: " << argv[0] << " <javascript_file>" << std::endl;
+    std::cerr << "Example: " << argv[0] << " test.js" << std::endl;
+    return 1;
+  }
   // Initialize V8.
   v8::V8::InitializeICUDefaultLocation(argv[0]);
   v8::V8::InitializeExternalStartupData(argv[0]);
   std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
   v8::V8::InitializePlatform(platform.get());
+
+  // Enable GC exposure to JavaScript
+  v8::V8::SetFlagsFromString("--expose-gc");
+
   v8::V8::Initialize();
 
   // Create a new Isolate and make it the current one.
@@ -94,6 +123,21 @@ int main(int argc, char* argv[]) {
     v8::Local<v8::Context> context = v8::Context::New(isolate);
     v8::Context::Scope context_scope(context);
 
+    // Add print function to global context
+    context->Global()->Set(
+        context,
+        v8::String::NewFromUtf8Literal(isolate, "print"),
+        v8::Function::New(context, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+          for (int i = 0; i < args.Length(); i++) {
+            if (i > 0) printf(" ");
+            v8::String::Utf8Value str(args.GetIsolate(), args[i]);
+            printf("%s", *str);
+          }
+          printf("\n");
+          fflush(stdout);  // Ensure immediate output
+        }).ToLocalChecked()
+    ).ToChecked();
+
     printf("=== V8 Heap Profiler Example ===\n");
 
     // Get heap profiler
@@ -103,54 +147,18 @@ int main(int argc, char* argv[]) {
     // Start allocation sampling (sample every 1KB with stack depth of 16)
     profiler->StartSamplingHeapProfiler(1024, 16);
 
-    // JavaScript code that creates various objects
-    const char* js_code = R"(
-      // Create objects that will generate allocations
-      var objects = [];
+    // Read JavaScript code from file
+    std::string js_code = ReadFile(argv[1]);
+    if (js_code.empty()) {
+      std::cerr << "Failed to read JavaScript file: " << argv[1] << std::endl;
+      return 1;
+    }
 
-      function createLargeObjects() {
-        for (let i = 0; i < 50; i++) {
-          objects.push({
-            id: i,
-            data: new Array(200).fill('item_' + i),
-            nested: {
-              value: 'test_string_' + i,
-              array: new Array(100).fill(i)
-            }
-          });
-        }
-        return objects.length;
-      }
-
-      function createStrings() {
-        var strings = [];
-        for (let i = 0; i < 100; i++) {
-          strings.push('This is test string number ' + i + ' with some additional content');
-        }
-        return strings.length;
-      }
-
-      function createMaps() {
-        var map = new Map();
-        for (let i = 0; i < 50; i++) {
-          map.set('key_' + i, 'value_' + i);
-        }
-        return map.size;
-      }
-
-      // Execute allocation-heavy functions
-      var objectCount = createLargeObjects();
-      var stringCount = createStrings();
-      var mapSize = createMaps();
-
-      'Created ' + objectCount + ' objects, ' + stringCount + ' strings, and map with ' + mapSize + ' entries';
-    )";
-
-    printf("Executing JavaScript code to generate allocations...\n");
+    printf("Executing JavaScript code from file: %s\n", argv[1]);
 
     // Create a string containing the JavaScript source code.
     v8::Local<v8::String> source =
-        v8::String::NewFromUtf8(isolate, js_code).ToLocalChecked();
+        v8::String::NewFromUtf8(isolate, js_code.c_str()).ToLocalChecked();
 
     // Compile the source code.
     v8::Local<v8::Script> script =
@@ -172,29 +180,27 @@ int main(int argc, char* argv[]) {
     profiler->StopSamplingHeapProfiler();
 
     // Print profile results
-    PrintAllocationProfile(profile);
+    // PrintAllocationProfile(profile);
 
     // Get basic heap statistics
     v8::HeapStatistics heap_stats;
     isolate->GetHeapStatistics(&heap_stats);
 
-    printf("\n=== Heap Statistics ===\n");
+    printf("\n=== Basic Heap Statistics ===\n");
     printf("Total heap size: %zu bytes\n", heap_stats.total_heap_size());
     printf("Used heap size: %zu bytes\n", heap_stats.used_heap_size());
-    printf("Heap size limit: %zu bytes\n", heap_stats.heap_size_limit());
-    printf("Number of native contexts: %zu\n", heap_stats.number_of_native_contexts());
+    printf("Total allocated bytes: %zu bytes\n", heap_stats.total_allocated_bytes());
 
+    // for (size_t i = 0; i < isolate->NumberOfHeapSpaces(); i++) {
+    //   // Get basic heap space statistics
+    //   v8::HeapSpaceStatistics heap_space_stats;
+    //   isolate->GetHeapSpaceStatistics(&heap_space_stats, i);
 
-    for (size_t i = 0; i < isolate->NumberOfHeapSpaces(); i++) {
-      // Get basic heap space statistics
-      v8::HeapSpaceStatistics heap_space_stats;
-      isolate->GetHeapSpaceStatistics(&heap_space_stats, i);
-
-      printf("\n=== Heap Space Statistics ===\n");
-      printf("Space name: %s\n", heap_space_stats.space_name());
-      printf("Total space size: %zu bytes\n", heap_space_stats.space_size());
-      printf("Used space size: %zu bytes\n", heap_space_stats.space_used_size());
-    }
+    //   printf("\n=== Heap Space Statistics ===\n");
+    //   printf("Space name: %s\n", heap_space_stats.space_name());
+    //   printf("Total space size: %zu bytes\n", heap_space_stats.space_size());
+    //   printf("Used space size: %zu bytes\n", heap_space_stats.space_used_size());
+    // }
 
     // Clean up the profile
     delete profile;
