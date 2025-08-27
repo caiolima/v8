@@ -140,6 +140,9 @@ class V8_EXPORT_PRIVATE HeapAllocator final {
   MainAllocator* shared_space_allocator() {
     return &shared_space_allocator_.value();
   }
+  MainAllocator* shared_trusted_space_allocator() {
+    return &shared_trusted_space_allocator_.value();
+  }
 
   bool RetryCustomAllocate(CustomAllocationFunction allocate,
                            AllocationType allocation);

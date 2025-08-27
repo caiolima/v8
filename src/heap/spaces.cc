@@ -63,5 +63,49 @@ Space* SpaceIterator::Next() {
   return space;
 }
 
+uint64_t Space::GetTotalAllocatedBytesInLAA() const {
+  uint64_t total_bytes = 0;
+  HeapAllocator* allocator = heap_->allocator();
+
+  // Here we check spaces that might have allocations in their current
+  // LinearAllocationArea that hasn't been freed yet, which means that they
+  // weren't added to the total allocation counter.
+  MainAllocator* space_allocator = nullptr;
+  switch (identity()) {
+    case NEW_SPACE: {
+      space_allocator = allocator->new_space_allocator();
+      break;
+    }
+    case OLD_SPACE: {
+      space_allocator = allocator->old_space_allocator();
+      break;
+    }
+    case TRUSTED_SPACE: {
+      space_allocator = allocator->trusted_space_allocator();
+      break;
+    }
+    case CODE_SPACE: {
+      space_allocator = allocator->code_space_allocator();
+      break;
+    }
+    case SHARED_SPACE: {
+      space_allocator = allocator->shared_space_allocator();
+      break;
+    }
+    case SHARED_TRUSTED_SPACE: {
+      space_allocator = allocator->shared_trusted_space_allocator();
+      break;
+    }
+    default:
+      break;
+  }
+
+  if (space_allocator && space_allocator->top() > space_allocator->start()) {
+    total_bytes += space_allocator->top() - space_allocator->start();
+  }
+
+  return total_bytes;
+}
+
 }  // namespace internal
 }  // namespace v8

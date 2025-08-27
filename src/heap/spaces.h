@@ -91,6 +91,10 @@ class V8_EXPORT_PRIVATE Space : public BaseSpace {
   inline void DecrementExternalBackingStoreBytes(ExternalBackingStoreType type,
                                                  size_t amount);
 
+  // Returns the total of bytes curretly allocated in a LinearAllocationArea.
+  // It's used to properly calculate total allocated bytes in an isolate.
+  virtual uint64_t GetTotalAllocatedBytesInLAA() const;
+
   // Returns amount of off-heap memory in-use by objects in this Space.
   virtual size_t ExternalBackingStoreBytes(
       ExternalBackingStoreType type) const {
@@ -138,6 +142,8 @@ class V8_EXPORT_PRIVATE Space : public BaseSpace {
   std::atomic<size_t> external_backing_store_bytes_[static_cast<int>(
       ExternalBackingStoreType::kNumValues)] = {0};
   std::unique_ptr<FreeList> free_list_;
+  // uint64_t total_allocated_bytes = 0;
+  // uint64_t total_allocated_bytes_in_gc = 0;
 };
 
 static_assert(sizeof(std::atomic<intptr_t>) == kSystemPointerSize);
