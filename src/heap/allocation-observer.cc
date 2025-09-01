@@ -173,14 +173,14 @@ PauseAllocationObserversScope::~PauseAllocationObserversScope() {
 
 void TotalAllocationTracker::Step(int bytes_allocated, Address soon_object,
                                   size_t size) {
-  const char* space_name = "unknown";
+  // const char* space_name = "unknown";
 
-  if (soon_object != kNullAddress) {
-    AllocationSpace space_id = MemoryChunkMetadata::FromAddress(soon_object)->owner_identity();
-    space_name = ToString(space_id);
-  }
+  // if (soon_object != kNullAddress) {
+  //   AllocationSpace space_id = MemoryChunkMetadata::FromAddress(soon_object)->owner_identity();
+  //   space_name = ToString(space_id);
+  // }
 
-  PrintF("Allocation: %zu bytes at %p in %s\n", size, reinterpret_cast<void*>(soon_object), space_name);
+  // PrintF("Allocation: %zu bytes at %p in %s\n", size, reinterpret_cast<void*>(soon_object), space_name);
 
   // Track the allocation size
   total_bytes_allocated_.fetch_add(size, std::memory_order_relaxed);

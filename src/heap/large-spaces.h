@@ -147,7 +147,7 @@ class OldLargeObjectSpace : public LargeObjectSpace {
   V8_EXPORT_PRIVATE explicit OldLargeObjectSpace(Heap* heap);
 
   V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT AllocationResult
-  AllocateRaw(LocalHeap* local_heap, int object_size, AllocationHint hint);
+  AllocateRaw(LocalHeap* local_heap, int object_size, AllocationOrigin origin, AllocationHint hint);
 
   void PromoteNewLargeObject(LargePageMetadata* page);
 
@@ -156,6 +156,7 @@ class OldLargeObjectSpace : public LargeObjectSpace {
   V8_WARN_UNUSED_RESULT AllocationResult AllocateRaw(LocalHeap* local_heap,
                                                      int object_size,
                                                      Executability executable,
+                                                     AllocationOrigin origin,
                                                      AllocationHint hint);
 };
 
@@ -181,7 +182,7 @@ class NewLargeObjectSpace : public LargeObjectSpace {
   NewLargeObjectSpace(Heap* heap, size_t capacity);
 
   V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT AllocationResult
-  AllocateRaw(LocalHeap* local_heap, int object_size, AllocationHint hint);
+  AllocateRaw(LocalHeap* local_heap, int object_size, AllocationOrigin origin, AllocationHint hint);
 
   // Available bytes for objects in this space.
   size_t Available() const override;
@@ -201,7 +202,7 @@ class CodeLargeObjectSpace : public OldLargeObjectSpace {
   explicit CodeLargeObjectSpace(Heap* heap);
 
   V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT AllocationResult
-  AllocateRaw(LocalHeap* local_heap, int object_size, AllocationHint hint);
+  AllocateRaw(LocalHeap* local_heap, int object_size, AllocationOrigin origin, AllocationHint hint);
 
  protected:
   void AddPage(LargePageMetadata* page, size_t object_size) override;

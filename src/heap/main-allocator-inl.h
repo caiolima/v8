@@ -32,8 +32,10 @@ AllocationResult MainAllocator::AllocateRaw(int size_in_bytes,
   AllocationResult result;
 
   if (alignment != kTaggedAligned) [[unlikely]] {
+    PrintF("AllocateFastAligned called. top: %zu, limit: %zu\n", allocation_info_->top(), allocation_info_->limit());
     result = AllocateFastAligned(size_in_bytes, nullptr, alignment, origin);
   } else {
+    PrintF("AllocateFastUnaligned called. top: %zu, limit: %zu\n", allocation_info_->top(), allocation_info_->limit());
     result = AllocateFastUnaligned(size_in_bytes, origin);
   }
 
@@ -49,6 +51,10 @@ AllocationResult MainAllocator::AllocateFastUnaligned(int size_in_bytes,
   }
   Tagged<HeapObject> obj =
       HeapObject::FromAddress(allocation_info().IncrementTop(size_in_bytes));
+
+  if (origin == AllocationOrigin::kGC) {
+    isolate_heap_->isolate()->CountTotalAllocatedBytesInGC(size_in_bytes);
+  }
 
   MSAN_ALLOCATED_UNINITIALIZED_MEMORY(obj.address(), size_in_bytes);
 
@@ -72,6 +78,10 @@ AllocationResult MainAllocator::AllocateFastAligned(
       allocation_info().IncrementTop(aligned_size_in_bytes));
   if (result_aligned_size_in_bytes)
     *result_aligned_size_in_bytes = aligned_size_in_bytes;
+
+  if (origin == AllocationOrigin::kGC) {
+    isolate_heap_->isolate()->CountTotalAllocatedBytesInGC(aligned_size_in_bytes);
+  }
 
   if (filler_size > 0) {
     obj = space_heap()->PrecedeWithFiller(obj, filler_size);
