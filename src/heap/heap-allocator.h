@@ -137,6 +137,9 @@ class V8_EXPORT_PRIVATE HeapAllocator final {
   MainAllocator* shared_space_allocator() {
     return &shared_space_allocator_.value();
   }
+  MainAllocator* shared_trusted_space_allocator() {
+    return &shared_trusted_space_allocator_.value();
+  }
 
   template <typename AllocateFunction>
   V8_WARN_UNUSED_RESULT V8_INLINE auto CustomAllocateWithRetryOrFail(

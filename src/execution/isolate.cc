@@ -3865,6 +3865,51 @@ DirectHandle<NativeContext> Isolate::GetIncumbentContextSlow() {
   return Utils::OpenDirectHandle(*entered_context);
 }
 
+size_t Isolate::GetTotalAllocatedBytes() {
+  size_t total_bytes = this->total_allocated_bytes;
+
+  // Add LAB usage from all spaces that have Linear Allocation Buffers
+  HeapAllocator* allocator = heap()->allocator();
+
+  if (heap()->new_space()) {
+    const MainAllocator* new_allocator = allocator->new_space_allocator();
+    if (new_allocator->top() > new_allocator->start()) {
+      total_bytes += new_allocator->top() - new_allocator->start();
+    }
+  }
+
+  const MainAllocator* old_allocator = allocator->old_space_allocator();
+  if (old_allocator->top() > old_allocator->start()) {
+    total_bytes += old_allocator->top() - old_allocator->start();
+  }
+
+  const MainAllocator* trusted_allocator = allocator->trusted_space_allocator();
+  if (trusted_allocator->top() > trusted_allocator->start()) {
+    total_bytes += trusted_allocator->top() - trusted_allocator->start();
+  }
+
+  const MainAllocator* code_allocator = allocator->code_space_allocator();
+  if (code_allocator->top() > code_allocator->start()) {
+    total_bytes += code_allocator->top() - code_allocator->start();
+  }
+
+  if (has_shared_space()) {
+    const MainAllocator* shared_allocator = allocator->shared_space_allocator();
+    if (shared_allocator->top() > shared_allocator->start()) {
+      total_bytes += shared_allocator->top() - shared_allocator->start();
+    }
+
+    const MainAllocator* trust_shared_allocator = allocator->shared_space_allocator();
+    if (trust_shared_allocator->top() > trust_shared_allocator->start()) {
+      total_bytes += trust_shared_allocator->top() - trust_shared_allocator->start();
+    }
+  }
+
+  CHECK_LE(total_allocated_bytes_in_gc, total_bytes);
+  PrintF("Total Bytes: %zu Total Bytes from GC: %zu\n", total_bytes, total_allocated_bytes_in_gc);
+  return total_bytes - total_allocated_bytes_in_gc;
+}
+
 char* Isolate::ArchiveThread(char* to) {
   MemCopy(to, reinterpret_cast<char*>(thread_local_top()),
           sizeof(ThreadLocalTop));
@@ -5806,9 +5851,9 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
 
     // FIXME: this should not be here, and it should be behing a flag or any
     // other API mechanism to avoid counting overhead on every allocation.
-    total_allocation_tracker_ = std::make_unique<TotalAllocationTracker>();
-    heap_.AddAllocationObserversToAllSpaces(total_allocation_tracker_.get(),
-                                            total_allocation_tracker_.get());
+    // total_allocation_tracker_ = std::make_unique<TotalAllocationTracker>();
+    // heap_.AddAllocationObserversToAllSpaces(total_allocation_tracker_.get(),
+    //                                        total_allocation_tracker_.get());
   }
 
   DCHECK_EQ(this, Isolate::Current());

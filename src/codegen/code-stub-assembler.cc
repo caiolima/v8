@@ -1545,6 +1545,7 @@ TNode<HeapObject> CodeStubAssembler::AllocateRaw(TNode<IntPtrT> size_in_bytes,
 
   BIND(&runtime_call);
   {
+    Print("Taking Slow Path");
     TNode<Smi> runtime_flags = SmiConstant(
         Smi::FromInt(needs_double_alignment ? kDoubleAligned : kTaggedAligned));
     if (flags & AllocationFlag::kPretenured) {
@@ -1562,6 +1563,7 @@ TNode<HeapObject> CodeStubAssembler::AllocateRaw(TNode<IntPtrT> size_in_bytes,
   // When there is enough space, return `top' and bump it up.
   BIND(&no_runtime_call);
   {
+    Print("Taking fast bump path");
     StoreNoWriteBarrier(MachineType::PointerRepresentation(), top_address,
                         new_top);
 
@@ -1652,9 +1654,11 @@ TNode<HeapObject> CodeStubAssembler::AllocateInNewSpace(
 TNode<HeapObject> CodeStubAssembler::Allocate(TNode<IntPtrT> size_in_bytes,
                                               AllocationFlags flags) {
   Comment("Allocate");
+
   if (v8_flags.single_generation) flags |= AllocationFlag::kPretenured;
   bool const new_space = !(flags & AllocationFlag::kPretenured);
   if (!(flags & AllocationFlag::kDoubleAlignment)) {
+    Print("Executing Optimized Allocate");
     TNode<HeapObject> heap_object =
         OptimizedAllocate(size_in_bytes, new_space ? AllocationType::kYoung
                                                    : AllocationType::kOld);
@@ -1669,6 +1673,10 @@ TNode<HeapObject> CodeStubAssembler::Allocate(TNode<IntPtrT> size_in_bytes,
   TNode<ExternalReference> limit_address =
       IsolateField(new_space ? IsolateFieldId::kNewAllocationInfoLimit
                              : IsolateFieldId::kOldAllocationInfoLimit);
+
+  Print("Top: ", TNode<UintPtrT>::UncheckedCast(top_address));
+
+  Print("limit: ", TNode<UintPtrT>::UncheckedCast(limit_address));
 
   if (flags & AllocationFlag::kDoubleAlignment) {
     return AllocateRawDoubleAligned(size_in_bytes, flags,

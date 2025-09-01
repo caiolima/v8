@@ -1186,11 +1186,7 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   const Heap* heap() const { return &heap_; }
   ReadOnlyHeap* read_only_heap() const { return read_only_heap_; }
 
-  size_t total_allocated_bytes() const {
-    return total_allocation_tracker_
-        ? total_allocation_tracker_->total_allocated_bytes()
-        : 0;
-  }
+  size_t GetTotalAllocatedBytes();
   static Isolate* FromHeap(const Heap* heap) {
     return reinterpret_cast<Isolate*>(reinterpret_cast<Address>(heap) -
                                       OFFSET_OF(Isolate, heap_));
@@ -1818,6 +1814,9 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   // Count multiple usages at once; cheaper than calling the {CountUsage}
   // separately for each feature.
   void CountUsage(base::Vector<const v8::Isolate::UseCounterFeature> features);
+
+  void CountTotalAllocatedBytes(size_t size_in_bytes) { total_allocated_bytes += size_in_bytes; }
+  void CountTotalAllocatedBytesInGC(size_t size_in_bytes) { total_allocated_bytes_in_gc += size_in_bytes; }
 
   static std::string GetTurboCfgFileName(Isolate* isolate);
 
@@ -2552,7 +2551,9 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   Heap heap_;
   ReadOnlyHeap* read_only_heap_ = nullptr;
 
-  std::unique_ptr<TotalAllocationTracker> total_allocation_tracker_;
+  // std::unique_ptr<TotalAllocationTracker> total_allocation_tracker_;
+  size_t total_allocated_bytes;
+  size_t total_allocated_bytes_in_gc;
 
   // These are guaranteed empty when !OwnsStringTables().
   std::unique_ptr<StringTable> string_table_;
