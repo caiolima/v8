@@ -201,7 +201,6 @@ AllocationResult MainAllocator::AllocateRawSlow(int size_in_bytes,
                 v8_flags.allow_allocation_in_fast_api_call ||
                     !isolate_heap()->isolate()->InFastCCall());
 
-  PrintF("AllocationSlow called\n");
   AllocationResult result =
       alignment != kTaggedAligned
           ? AllocateRawSlowAligned(size_in_bytes, alignment, origin)

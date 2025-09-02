@@ -118,26 +118,6 @@ class V8_EXPORT_PRIVATE V8_NODISCARD PauseAllocationObserversScope {
   Heap* heap_;
 };
 
-
-// FIXME: I'm also not sure if this should be the place for this observer. Maybe
-// it should be in either Isolate or in Heap files.
-class V8_EXPORT_PRIVATE TotalAllocationTracker final : public AllocationObserver {
- public:
-  TotalAllocationTracker() : AllocationObserver(1) {}
-  TotalAllocationTracker(const TotalAllocationTracker&) = delete;
-  TotalAllocationTracker& operator=(const TotalAllocationTracker&) = delete;
-
-  size_t total_allocated_bytes() const {
-    return total_bytes_allocated_.load(std::memory_order_relaxed);
-  }
-
- protected:
-  void Step(int bytes_allocated, Address soon_object, size_t size) override;
-
- private:
-  std::atomic<size_t> total_bytes_allocated_{0};
-};
-
 }  // namespace internal
 }  // namespace v8
 

@@ -708,10 +708,8 @@ TNode<HeapObject> ConstructorBuiltinsAssembler::CreateShallowObjectLiteral(
                                     sizeof(AllocationMemento))));
   }
 
-  Print("Triggering allocation of size", TNode<UintPtrT>::UncheckedCast(allocation_size));
   TNode<HeapObject> copy =
       UncheckedCast<HeapObject>(AllocateInNewSpace(allocation_size));
-  Print("Finished allocation");
   {
     Comment("Initialize Literal Copy");
     // Initialize Object fields.
