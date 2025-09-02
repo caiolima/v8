@@ -3881,7 +3881,6 @@ size_t Isolate::GetTotalAllocatedBytes() {
   const MainAllocator* old_allocator = allocator->old_space_allocator();
   if (old_allocator->top() > old_allocator->start()) {
     size_t size = old_allocator->top() - old_allocator->start();
-    PrintF("Total allocated on Old Space: %zu\n", size);
     total_bytes += size;
   }
 
@@ -3908,7 +3907,7 @@ size_t Isolate::GetTotalAllocatedBytes() {
   }
 
   CHECK_LE(total_allocated_bytes_in_gc, total_bytes);
-  PrintF("Total Bytes: %zu Total Bytes from GC: %zu\n", total_bytes, total_allocated_bytes_in_gc);
+  //PrintF("Total Bytes: %zu Total Bytes from GC: %zu\n", total_bytes, total_allocated_bytes_in_gc);
   return total_bytes - total_allocated_bytes_in_gc;
 }
 

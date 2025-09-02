@@ -2658,8 +2658,6 @@ IGNITION_HANDLER(CreateObjectLiteral, InterpreterAssembler) {
   TNode<TaggedIndex> slot = BytecodeOperandIdxTaggedIndex(1);
   TNode<Uint32T> bytecode_flags = BytecodeOperandFlag8(2);
 
-  Print("Executed CreateObjectLiteral");
-
   TNode<ObjectBoilerplateDescription> object_boilerplate_description =
       CAST(LoadConstantPoolEntryAtOperandIndex(0));
   TNode<UintPtrT> flags_raw =
@@ -2679,7 +2677,6 @@ IGNITION_HANDLER(CreateObjectLiteral, InterpreterAssembler) {
 
   BIND(&fast_shallow_clone);
   {
-    Print("fast_shallow_clone");
     // If we can do a fast clone do the fast-path in CreateShallowObjectLiteral.
     ConstructorBuiltinsAssembler constructor_assembler(state());
     TNode<HeapObject> result = constructor_assembler.CreateShallowObjectLiteral(

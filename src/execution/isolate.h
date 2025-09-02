@@ -36,7 +36,6 @@
 #include "src/execution/stack-guard.h"
 #include "src/handles/handles.h"
 #include "src/handles/traced-handles.h"
-#include "src/heap/allocation-observer.h"
 #include "src/heap/factory.h"
 #include "src/heap/heap.h"
 #include "src/heap/read-only-heap.h"
@@ -2551,7 +2550,6 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   Heap heap_;
   ReadOnlyHeap* read_only_heap_ = nullptr;
 
-  // std::unique_ptr<TotalAllocationTracker> total_allocation_tracker_;
   size_t total_allocated_bytes;
   size_t total_allocated_bytes_in_gc;
 
