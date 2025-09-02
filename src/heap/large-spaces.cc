@@ -88,7 +88,6 @@ void LargeObjectSpace::AdvanceAndInvokeAllocationObservers(Address soon_object,
   }
 
   // Large objects can be accounted immediately since no LAB is involved.
-  heap_->isolate()->CountTotalAllocatedBytesInGC(object_size);
   allocation_counter_.AdvanceAllocationObservers(object_size);
 }
 
@@ -152,6 +151,7 @@ AllocationResult OldLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
     if (origin == AllocationOrigin::kGC) {
       heap()->isolate()->CountTotalAllocatedBytesInGC(object_size);
     }
+    heap()->isolate()->CountTotalAllocatedBytes(object_size);
   }
 
   return AllocationResult::FromObject(object);
@@ -424,6 +424,7 @@ AllocationResult NewLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
   if (origin == AllocationOrigin::kGC) {
     heap()->isolate()->CountTotalAllocatedBytesInGC(object_size);
   }
+  heap()->isolate()->CountTotalAllocatedBytes(object_size);
 
   return AllocationResult::FromObject(result);
 }
