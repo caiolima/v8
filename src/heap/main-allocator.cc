@@ -218,10 +218,6 @@ AllocationResult MainAllocator::AllocateRawSlowUnaligned(
   AllocationResult result = AllocateFastUnaligned(size_in_bytes, origin);
   DCHECK(!result.IsFailure());
 
-  if (origin == AllocationOrigin::kGC) {
-    isolate_heap_->isolate()->CountTotalAllocatedBytesInGC(size_in_bytes);
-  }
-
   InvokeAllocationObservers(result.ToAddress(), size_in_bytes, size_in_bytes,
                             size_in_bytes);
 
@@ -241,10 +237,6 @@ AllocationResult MainAllocator::AllocateRawSlowAligned(
       size_in_bytes, &aligned_size_in_bytes, alignment, origin);
   DCHECK_GE(max_aligned_size, aligned_size_in_bytes);
   DCHECK(!result.IsFailure());
-
-  if (origin == AllocationOrigin::kGC) {
-    isolate_heap_->isolate()->CountTotalAllocatedBytesInGC(max_aligned_size);
-  }
 
   InvokeAllocationObservers(result.ToAddress(), size_in_bytes,
                             aligned_size_in_bytes, max_aligned_size);
@@ -897,6 +889,7 @@ bool PagedSpaceAllocatorPolicy::TryExtendLAB(int size_in_bytes) {
   if (current_top + size_in_bytes > max_limit) {
     return false;
   }
+  isolate_heap()->isolate()->CountTotalAllocatedBytes(allocator_->top() - allocator_->start());
   allocator_->AdvanceAllocationObservers();
   Address new_limit =
       allocator_->ComputeLimit(current_top, max_limit, size_in_bytes);
@@ -933,8 +926,8 @@ void PagedSpaceAllocatorPolicy::FreeLinearAllocationAreaUnsynchronized() {
   DCHECK_IMPLIES(!allocator_->supports_extending_lab(),
                  current_max_limit == current_limit);
 
-  allocator_->AdvanceAllocationObservers();
   isolate_heap()->isolate()->CountTotalAllocatedBytes(allocator_->top() - allocator_->start());
+  allocator_->AdvanceAllocationObservers();
 
   if (!v8_flags.black_allocated_pages) {
     if (current_top != current_limit &&
