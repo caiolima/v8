@@ -20,11 +20,11 @@ for (let i = 0; i < 100; i++) {
 print("allocating 'b' from JS.");
 let b = {};
 
-a = null;
-print("performing full GC...");
-gc();
-print("GC completed...");
-
+// a = null;
+// print("performing full GC...");
+// gc();
+// print("GC completed...");
+// 
 print("allocating 'c' from JS.");
 let c = {};
 
