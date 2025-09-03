@@ -1185,6 +1185,7 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   const Heap* heap() const { return &heap_; }
   ReadOnlyHeap* read_only_heap() const { return read_only_heap_; }
 
+  size_t GetTotalAllocatedBytesInSpace(Space* space);
   size_t GetTotalAllocatedBytes();
   static Isolate* FromHeap(const Heap* heap) {
     return reinterpret_cast<Isolate*>(reinterpret_cast<Address>(heap) -
@@ -1814,8 +1815,8 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   // separately for each feature.
   void CountUsage(base::Vector<const v8::Isolate::UseCounterFeature> features);
 
-  void CountTotalAllocatedBytes(size_t size_in_bytes) { total_allocated_bytes += size_in_bytes; }
-  void CountTotalAllocatedBytesInGC(size_t size_in_bytes) { total_allocated_bytes_in_gc += size_in_bytes; }
+  // void CountTotalAllocatedBytes(size_t size_in_bytes) { total_allocated_bytes += size_in_bytes; }
+  // void CountTotalAllocatedBytesInGC(size_t size_in_bytes) { total_allocated_bytes_in_gc += size_in_bytes; }
 
   static std::string GetTurboCfgFileName(Isolate* isolate);
 

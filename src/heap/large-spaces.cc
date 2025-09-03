@@ -117,6 +117,8 @@ AllocationResult OldLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
   DCHECK_IMPLIES(identity() == SHARED_LO_SPACE,
                  pending_object() == kNullAddress);
 
+  PrintF("Debug #1 OldSpace::AllocateRaw called\n");
+
   // Check if we want to force a GC before growing the old space further.
   // If so, fail the allocation.
   if (!heap()->ShouldExpandOldGenerationOnSlowAllocation(
@@ -147,12 +149,13 @@ AllocationResult OldLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
   if (local_heap->is_main_thread() && identity() != SHARED_LO_SPACE) {
     AdvanceAndInvokeAllocationObservers(object.address(),
                                         static_cast<size_t>(object_size));
-
-    if (origin == AllocationOrigin::kGC) {
-      heap()->isolate()->CountTotalAllocatedBytesInGC(object_size);
-    }
-    heap()->isolate()->CountTotalAllocatedBytes(object_size);
   }
+
+  PrintF("Debug #2 OldSpace::AllocateRaw called\n");
+  if (origin == AllocationOrigin::kGC) {
+    this->CountTotalAllocatedBytesInGC(object_size);
+  }
+  this->CountTotalAllocatedBytes(object_size);
 
   return AllocationResult::FromObject(object);
 }
@@ -422,9 +425,9 @@ AllocationResult NewLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
                                       static_cast<size_t>(object_size));
 
   if (origin == AllocationOrigin::kGC) {
-    heap()->isolate()->CountTotalAllocatedBytesInGC(object_size);
+    this->CountTotalAllocatedBytesInGC(object_size);
   }
-  heap()->isolate()->CountTotalAllocatedBytes(object_size);
+  this->CountTotalAllocatedBytes(object_size);
 
   return AllocationResult::FromObject(result);
 }
