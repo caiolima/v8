@@ -9,10 +9,10 @@ var longLivedObjects = [];
 
 function createLargeObjects() {
   print("Creating large objects...");
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 500; i++) {
     ephemeralObjects.push({
       id: i,
-      data: new Array(200000).fill('item_' + i),
+      data: new Array(100000).fill('item_' + i),
       nested: {
         value: 'test_string_' + i,
         array: new Array(100).fill(i)
@@ -34,7 +34,7 @@ function createLargeObjects() {
 function createStrings() {
   print("Creating strings...");
   var strings = [];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 1000; i++) {
     strings.push('This is test string number ' + i + ' with some additional content');
   }
   return strings.length;
@@ -43,7 +43,7 @@ function createStrings() {
 function createMaps() {
   print("Creating maps...");
   var map = new Map();
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 500; i++) {
     map.set('key_' + i, 'value_' + i);
   }
   return map.size;
@@ -54,9 +54,9 @@ var objectCount = createLargeObjects();
 var stringCount = createStrings();
 var mapSize = createMaps();
 
-print("Before GC - objects in memory");
+// print("Before GC - objects in memory");
 
 // Clear references to allow GC
-//ephemeralObjects = null;
+// ephemeralObjects = null;
 // Trigger garbage collection (available due to --expose-gc flag)
-gc();
+// gc();

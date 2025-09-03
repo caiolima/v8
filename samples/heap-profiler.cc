@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   v8::V8::InitializePlatform(platform.get());
 
   // Enable GC exposure to JavaScript
-  v8::V8::SetFlagsFromString("--expose-gc");
+  v8::V8::SetFlagsFromString("--expose-gc --single-threaded-gc --no-concurrent-marking --no-concurrent-sweeping --trace-page-promotions --trace-evacuation");
 
   v8::V8::Initialize();
 
