@@ -1815,9 +1815,6 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   // separately for each feature.
   void CountUsage(base::Vector<const v8::Isolate::UseCounterFeature> features);
 
-  // void CountTotalAllocatedBytes(size_t size_in_bytes) { total_allocated_bytes += size_in_bytes; }
-  // void CountTotalAllocatedBytesInGC(size_t size_in_bytes) { total_allocated_bytes_in_gc += size_in_bytes; }
-
   static std::string GetTurboCfgFileName(Isolate* isolate);
 
   int GetNextScriptId();
@@ -2550,9 +2547,6 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   IsolateGroup* isolate_group_;
   Heap heap_;
   ReadOnlyHeap* read_only_heap_ = nullptr;
-
-  size_t total_allocated_bytes;
-  size_t total_allocated_bytes_in_gc;
 
   // These are guaranteed empty when !OwnsStringTables().
   std::unique_ptr<StringTable> string_table_;
