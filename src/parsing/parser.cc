@@ -1619,17 +1619,23 @@ void Parser::ParseImportDeclaration() {
         PeekAheadAhead() == Token::kIdentifier) {
       Consume(Token::kIdentifier);
       import_phase = ModuleImportPhase::kSource;
+
+      import_default_binding = ParseNonRestrictedIdentifier();
+      import_default_binding_loc = scanner()->location();
+      DeclareUnboundVariable(import_default_binding, VariableMode::kConst,
+                            kNeedsInitialization, pos);
     } else if (v8_flags.js_defer_import_eval &&
                PeekContextualKeyword(ast_value_factory()->defer_string()) &&
                PeekAhead() == Token::kMul &&
                PeekAheadAhead() == Token::kIdentifier) {
       Consume(Token::kIdentifier);
       import_phase = ModuleImportPhase::kDefer;
+    } else {
+      import_default_binding = ParseNonRestrictedIdentifier();
+      import_default_binding_loc = scanner()->location();
+      DeclareUnboundVariable(import_default_binding, VariableMode::kConst,
+                            kNeedsInitialization, pos);
     }
-    import_default_binding = ParseNonRestrictedIdentifier();
-    import_default_binding_loc = scanner()->location();
-    DeclareUnboundVariable(import_default_binding, VariableMode::kConst,
-                           kNeedsInitialization, pos);
   }
 
   // Parse NameSpaceImport or NamedImports if present.

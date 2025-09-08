@@ -10760,7 +10760,7 @@ TEST_F(ParsingTest, ImportCallSourceAttributesNotAllowed) {
 }
 
 TEST_F(ParsingTest, ImportDeferSuccess) {
-  i::FlagScope<bool> f(&v8_flags.js_source_phase_imports, true);
+  i::FlagScope<bool> f(&v8_flags.js_defer_import_eval, true);
   // clang-format off
   const char* context_data[][2] = {
     {"", ""},
