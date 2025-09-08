@@ -339,6 +339,7 @@ using WasmJSPIEnabledCallback = bool (*)(Local<Context> context);
  */
 enum class ModuleImportPhase {
   kSource,
+  kDefer,
   kEvaluation,
 };
 

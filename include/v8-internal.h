@@ -1039,15 +1039,15 @@ class Internals {
   struct StaticReadOnlyRoot {
 #ifdef V8_ENABLE_WEBASSEMBLY
 #ifdef V8_INTL_SUPPORT
-    static constexpr Tagged_t kBuildDependentTheHoleValue = 0x67b9;
+    static constexpr Tagged_t kBuildDependentTheHoleValue = 0x67cd;
 #else
     static constexpr Tagged_t kBuildDependentTheHoleValue = 0x5b1d;
 #endif
 #else
 #ifdef V8_INTL_SUPPORT
-    static constexpr Tagged_t kBuildDependentTheHoleValue = 0x6511;
+    static constexpr Tagged_t kBuildDependentTheHoleValue = 0x5b31;
 #else
-    static constexpr Tagged_t kBuildDependentTheHoleValue = 0x5875;
+    static constexpr Tagged_t kBuildDependentTheHoleValue = 0x5889;
 #endif
 #endif
 
