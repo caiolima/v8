@@ -10759,6 +10759,35 @@ TEST_F(ParsingTest, ImportCallSourceAttributesNotAllowed) {
   RunModuleParserSyncTest(context_data, data, kError);
 }
 
+TEST_F(ParsingTest, ImportDeferSuccess) {
+  i::FlagScope<bool> f(&v8_flags.js_source_phase_imports, true);
+  // clang-format off
+  const char* context_data[][2] = {
+    {"", ""},
+    {"'use strict';", ""},
+    {nullptr}
+  };
+
+  const char* data[] = {
+    // Basic import declarations, not a deferred import
+    "import defer from ''",
+    "import from from ''",
+    // Deferred imports
+    "import defer * as ns from ''",
+    "import defer * as defer from ''",
+    "import defer * as from from ''",
+    "import defer * as ns from '' with { }",
+    "import defer * as ns from '' with { a: 'b' };",
+    nullptr
+  };
+  // clang-format on
+
+  RunParserSyncTest(context_data, data, kError);
+  // Skip preparser
+  RunModuleParserSyncTest(context_data, data, kSuccess, nullptr, 0, nullptr, 0,
+                          nullptr, 0, false);
+}
+
 TEST_F(ParsingTest, ConstSloppy) {
   // clang-format off
   const char* context_data[][2] = {
