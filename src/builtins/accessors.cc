@@ -243,6 +243,10 @@ void Accessors::ModuleNamespaceEntryGetter(
     v8::Local<v8::Name> name, const v8::PropertyCallbackInfo<v8::Value>& info) {
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
   HandleScope scope(isolate);
+
+  v8::String::Utf8Value utf8_name(info.GetIsolate(), name);
+  PrintF("Acessing Namespace Entry %s\n", *utf8_name);
+
   Tagged<JSModuleNamespace> holder =
       Cast<JSModuleNamespace>(*Utils::OpenDirectHandle(*info.Holder()));
   DirectHandle<Object> result;

@@ -1619,6 +1619,12 @@ void Parser::ParseImportDeclaration() {
         PeekAheadAhead() == Token::kIdentifier) {
       Consume(Token::kIdentifier);
       import_phase = ModuleImportPhase::kSource;
+    } else if (v8_flags.js_defer_import_eval &&
+               PeekContextualKeyword(ast_value_factory()->defer_string()) &&
+               PeekAhead() == Token::kMul &&
+               PeekAheadAhead() == Token::kIdentifier) {
+      Consume(Token::kIdentifier);
+      import_phase = ModuleImportPhase::kDefer;
     }
     import_default_binding = ParseNonRestrictedIdentifier();
     import_default_binding_loc = scanner()->location();
@@ -1630,7 +1636,7 @@ void Parser::ParseImportDeclaration() {
   const AstRawString* module_namespace_binding = nullptr;
   Scanner::Location module_namespace_binding_loc;
   const ZonePtrList<const NamedImport>* named_imports = nullptr;
-  if (import_phase == ModuleImportPhase::kEvaluation &&
+  if (import_phase != ModuleImportPhase::kSource &&
       (import_default_binding == nullptr || Check(Token::kComma))) {
     switch (peek()) {
       case Token::kMul: {
@@ -1644,6 +1650,12 @@ void Parser::ParseImportDeclaration() {
       }
 
       case Token::kLeftBrace:
+        // FIXME: this should consider defer already. I need to look which parse
+        // error should happen here.
+        if (import_phase == ModuleImportPhase::kDefer) {
+          ReportUnexpectedToken(scanner()->current_token());
+          return;
+        }
         named_imports = ParseNamedImports(pos);
         break;
 
@@ -1659,7 +1671,7 @@ void Parser::ParseImportDeclaration() {
   // TODO(42204365): Enable import attributes with source phase import once
   // specified.
   const ImportAttributes* import_attributes =
-      import_phase == ModuleImportPhase::kEvaluation
+      import_phase != ModuleImportPhase::kSource
           ? ParseImportWithOrAssertClause()
           : zone()->New<ImportAttributes>(zone());
   ExpectSemicolon();
@@ -1673,10 +1685,11 @@ void Parser::ParseImportDeclaration() {
   // Declare that takes a location?
 
   if (module_namespace_binding != nullptr) {
-    DCHECK_EQ(ModuleImportPhase::kEvaluation, import_phase);
+    //DCHECK_EQ(ModuleImportPhase::kEvaluation, import_phase);
     module()->AddStarImport(module_namespace_binding, module_specifier,
-                            import_attributes, module_namespace_binding_loc,
-                            specifier_loc, zone());
+                            import_phase, import_attributes,
+                            module_namespace_binding_loc, specifier_loc,
+                            zone());
   }
 
   if (import_default_binding != nullptr) {
@@ -1819,7 +1832,8 @@ void Parser::ParseExportStar() {
   const ImportAttributes* import_attributes = ParseImportWithOrAssertClause();
   ExpectSemicolon();
 
-  module()->AddStarImport(local_name, module_specifier, import_attributes,
+  module()->AddStarImport(local_name, module_specifier,
+                          ModuleImportPhase::kEvaluation, import_attributes,
                           local_name_loc, specifier_loc, zone());
   module()->AddExport(local_name, export_name, export_name_loc, zone());
 }

@@ -242,19 +242,20 @@ using AstRawStringMap =
 #define SINGLE_CHARACTER_ASCII_AST_STRING_CONSTANTS(F)       \
   SINGLE_CHARACTER_ASCII_INTERNALIZED_STRING_LIST_GENERATOR( \
       AST_STRING_CONSTANTS_INTERNALIZED_STRING_LIST_ADAPTER, F)
-#define AST_STRING_CONSTANTS(F)                           \
-  SINGLE_CHARACTER_ASCII_AST_STRING_CONSTANTS(F)          \
-  F(anonymous_string, "anonymous")                        \
-  F(arguments_string, "arguments")                        \
-  F(as_string, "as")                                      \
-  F(assert_string, "assert")                              \
-  F(async_string, "async")                                \
-  F(bigint_string, "bigint")                              \
-  F(boolean_string, "boolean")                            \
-  F(computed_string, "<computed>")                        \
-  F(dot_brand_string, ".brand")                           \
-  F(constructor_string, "constructor")                    \
-  F(default_string, "default")                            \
+#define AST_STRING_CONSTANTS(F)                  \
+  SINGLE_CHARACTER_ASCII_AST_STRING_CONSTANTS(F) \
+  F(anonymous_string, "anonymous")               \
+  F(arguments_string, "arguments")               \
+  F(as_string, "as")                             \
+  F(assert_string, "assert")                     \
+  F(async_string, "async")                       \
+  F(bigint_string, "bigint")                     \
+  F(boolean_string, "boolean")                   \
+  F(computed_string, "<computed>")               \
+  F(dot_brand_string, ".brand")                  \
+  F(constructor_string, "constructor")           \
+  F(default_string, "default")                   \
+  F(defer_string, "defer")                       \
   F(done_string, "done")                                  \
   F(dot_default_string, ".default")                       \
   F(dot_for_string, ".for")                               \
