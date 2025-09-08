@@ -1038,7 +1038,7 @@ class Internals {
 #ifdef V8_INTL_SUPPORT
     static constexpr Tagged_t kBuildDependentTheHoleValue = 0x656d;
 #else
-    static constexpr Tagged_t kBuildDependentTheHoleValue = 0x58bd;
+    static constexpr Tagged_t kBuildDependentTheHoleValue = 0x58d1;
 #endif
 #endif
 
