@@ -255,6 +255,7 @@ using AstRawStringMap =
   F(dot_brand_string, ".brand")                           \
   F(constructor_string, "constructor")                    \
   F(default_string, "default")                            \
+  F(defer_string, "defer")                                \
   F(done_string, "done")                                  \
   F(dot_default_string, ".default")                       \
   F(dot_for_string, ".for")                               \
