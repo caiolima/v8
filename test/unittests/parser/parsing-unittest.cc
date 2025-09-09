@@ -10772,6 +10772,10 @@ TEST_F(ParsingTest, ImportDeferSuccess) {
     // Basic import declarations, not a deferred import
     "import defer from ''",
     "import from from ''",
+    "import { defer } from ''",
+    "import { a as defer } from ''",
+    "import { defer as a } from ''",
+    "import 'defer'",
     // Deferred imports
     "import defer * as ns from ''",
     "import defer * as defer from ''",
@@ -10785,6 +10789,32 @@ TEST_F(ParsingTest, ImportDeferSuccess) {
   RunParserSyncTest(context_data, data, kError);
   // Skip preparser
   RunModuleParserSyncTest(context_data, data, kSuccess, nullptr, 0, nullptr, 0,
+                          nullptr, 0, false);
+}
+
+TEST_F(ParsingTest, ImportDeferErrorNamedImport) {
+  i::FlagScope<bool> f(&v8_flags.js_defer_import_eval, true);
+  // clang-format off
+  const char* context_data[][2] = {
+    {"", ""},
+    {"'use strict';", ""},
+    {nullptr}
+  };
+
+  const char* data[] = {
+    // Invalid deferred imports
+    "import defer { } from ''",
+    "import defer { a } from ''",
+    "import defer { a as b } from ''",
+    "import defer { c, d } from ''",
+    "import defer { e as f, g as h } from ''",
+    nullptr
+  };
+  // clang-format on
+
+  RunParserSyncTest(context_data, data, kError);
+  // Skip preparser
+  RunModuleParserSyncTest(context_data, data, kError, nullptr, 0, nullptr, 0,
                           nullptr, 0, false);
 }
 
