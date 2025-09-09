@@ -161,7 +161,8 @@ void Module::Reset(Isolate* isolate, DirectHandle<Module> module) {
   // The namespace object cannot exist, because it would have been created
   // by RunInitializationCode, which is called only after this module's SCC
   // succeeds instantiation.
-  DCHECK(!IsJSModuleNamespace(module->module_namespace()));
+  DCHECK(!IsJSModuleNamespace(module->module_namespace()) &&
+         !IsJSModuleNamespace(module->deferred_module_namespace()));
   const int export_count =
       IsSourceTextModule(*module)
           ? Cast<SourceTextModule>(*module)->regular_exports()->length()
@@ -316,8 +317,13 @@ MaybeDirectHandle<Object> Module::Evaluate(Isolate* isolate,
 }
 
 DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
-    Isolate* isolate, Handle<Module> module) {
-  DirectHandle<HeapObject> object(module->module_namespace(), isolate);
+    Isolate* isolate, Handle<Module> module, ModuleImportPhase phase) {
+  DCHECK(phase == ModuleImportPhase::kEvaluation ||
+         phase == ModuleImportPhase::kDefer);
+  Tagged<HeapObject> module_ns = phase == ModuleImportPhase::kEvaluation
+                                     ? module->module_namespace()
+                                     : module->deferred_module_namespace();
+  DirectHandle<HeapObject> object(module_ns, isolate);
   ReadOnlyRoots roots(isolate);
   if (!IsUndefined(*object, roots)) {
     // Namespace object already exists.
@@ -352,9 +358,16 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
 
   // Create the namespace object (initially empty).
   DirectHandle<JSModuleNamespace> ns =
-      isolate->factory()->NewJSModuleNamespace();
+      phase == ModuleImportPhase::kEvaluation
+          ? isolate->factory()->NewJSModuleNamespace()
+          : isolate->factory()->NewJSDeferredModuleNamespace();
   ns->set_module(*module);
-  module->set_module_namespace(*ns);
+  if (phase == ModuleImportPhase::kEvaluation) {
+    module->set_module_namespace(*ns);
+  } else {
+    DCHECK(phase == ModuleImportPhase::kDefer);
+    module->set_deferred_module_namespace(*ns);
+  }
 
   // Create the properties in the namespace object. Transition the object
   // to dictionary mode so that property addition is faster.
@@ -439,6 +452,63 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
   }
 
   return Just(it->property_attributes());
+}
+
+// https://tc39.es/proposal-defer-import-eval/#sec-EvaluateModuleSync
+void JSDeferredModuleNamespace::EvaluateModuleSync(
+    Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder) {
+  Handle<Module> module = handle(holder->module(), isolate);
+
+  // https://tc39.es/proposal-defer-import-eval/#sec-GetModuleExportsList
+  Zone zone(isolate->allocator(), ZONE_NAME);
+  UnorderedModuleSet seenModules(&zone);
+  if (!SourceTextModule::ReadyForSyncExecution(isolate, module, &seenModules)) {
+    isolate->Throw(*isolate->factory()->NewTypeError(
+        MessageTemplate::kNotReadyForSyncExec));
+    return;
+  }
+
+  MaybeDirectHandle<Object> maybe_result = Module::Evaluate(isolate, module);
+  DirectHandle<Object> result;
+  if (!maybe_result.ToHandle(&result)) {
+    return;
+  }
+
+  // If there's a result, it needs to be a promise with either Reject or
+  // Fulfilled status.
+  DCHECK(IsJSPromise(*result));
+  DirectHandle<JSPromise> promise = Cast<JSPromise>(result);
+  // 5. If promise.[[PromiseState]] is rejected, then
+  if (promise->status() == Promise::kRejected) {
+    // a. If promise.[[PromiseIsHandled]] is false, perform
+    // HostPromiseRejectionTracker(promise, "handle").
+    if (!promise->has_handler()) {
+      isolate->ReportPromiseReject(promise, DirectHandle<Object>(),
+                                   v8::kPromiseHandlerAddedAfterReject);
+    }
+    promise->set_has_handler(true);
+    isolate->Throw(promise->result());
+    return;
+  }
+  DCHECK_EQ(promise->status(), Promise::kFulfilled);
+}
+
+bool JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(
+    LookupIterator* it) {
+  DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
+  if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
+    DirectHandle<Name> name = it->GetName();
+    Isolate* isolate = it->isolate();
+    DirectHandle<JSDeferredModuleNamespace> ns =
+        Cast<JSDeferredModuleNamespace>(maybe_holder);
+    if (!Name::Equals(isolate, name, isolate->factory()->then_string()) &&
+        !IsSymbol(*name)) {
+      JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), ns);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // ES

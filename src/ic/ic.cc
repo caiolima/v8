@@ -870,7 +870,10 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
   if (lookup->state() == LookupIterator::ACCESS_CHECK) {
     handler = MaybeObjectHandle(LoadHandler::LoadSlow(isolate()));
   } else if (!lookup->IsFound()) {
-    if (lookup->IsPrivateName()) {
+    DirectHandle<JSReceiver> maybe_holder = lookup->CurrentHolder();
+    if (lookup->IsPrivateName() ||
+        (!maybe_holder.is_null() &&
+         IsJSDeferredModuleNamespace(*maybe_holder))) {
       handler = MaybeObjectHandle(LoadHandler::LoadSlow(isolate()));
     } else {
       TRACE_HANDLER_STATS(isolate(), LoadIC_LoadNonexistentDH);

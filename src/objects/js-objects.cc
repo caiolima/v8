@@ -128,8 +128,14 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
         return Just(false);
       case LookupIterator::ACCESSOR:
       case LookupIterator::DATA:
+        if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        }
         return Just(true);
       case LookupIterator::NOT_FOUND:
+        if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        }
         return Just(false);
     }
     UNREACHABLE();
@@ -1013,6 +1019,9 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
         return Just(true);
       case LookupIterator::DATA:
       case LookupIterator::ACCESSOR: {
+        if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        }
         DirectHandle<JSObject> holder = it->GetHolder<JSObject>();
         if (!it->IsConfigurable() ||
             (IsJSTypedArray(*holder) && it->IsElement(*holder))) {
@@ -1033,6 +1042,9 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
         return Just(true);
       }
       case LookupIterator::NOT_FOUND:
+        if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        }
         return Just(true);
     }
     UNREACHABLE();
@@ -1952,6 +1964,10 @@ Maybe<bool> JSReceiver::GetOwnPropertyDescriptor(LookupIterator* it,
                                              it->GetName(), desc);
   }
 
+  if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+    RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+  }
+
   Maybe<bool> intercepted = GetPropertyDescriptorWithInterceptor(it, desc);
   MAYBE_RETURN(intercepted, Nothing<bool>());
   if (intercepted.FromJust()) {
@@ -2618,6 +2634,8 @@ int JSObject::GetHeaderSize(InstanceType type,
       return JSIteratorFlatMapHelper::kHeaderSize;
     case JS_MODULE_NAMESPACE_TYPE:
       return JSModuleNamespace::kHeaderSize;
+    case JS_DEFERRED_MODULE_NAMESPACE_TYPE:
+      return JSDeferredModuleNamespace::kHeaderSize;
     case JS_SHARED_ARRAY_TYPE:
       return JSSharedArray::kHeaderSize;
     case JS_SHARED_STRUCT_TYPE:

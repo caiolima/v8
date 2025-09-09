@@ -1282,6 +1282,9 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
         if (it->HasAccess()) continue;
         return JSObject::GetPropertyWithFailedAccessCheck(it);
       case LookupIterator::ACCESSOR:
+        if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        }
         return GetPropertyWithAccessor(it);
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return it->isolate()->factory()->undefined_value();
@@ -1290,6 +1293,9 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         return it->GetStringPropertyValue();
       case LookupIterator::NOT_FOUND:
+        if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        }
         if (it->IsPrivateName()) {
           auto private_symbol = Cast<Symbol>(it->name());
           DirectHandle<String> name_string(

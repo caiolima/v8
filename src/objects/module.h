@@ -79,7 +79,8 @@ class Module : public TorqueGeneratedModule<Module, HeapObject> {
   // Get the namespace object for [module].  If it doesn't exist yet, it is
   // created.
   static DirectHandle<JSModuleNamespace> GetModuleNamespace(
-      Isolate* isolate, Handle<Module> module);
+      Isolate* isolate, Handle<Module> module,
+      ModuleImportPhase phase = ModuleImportPhase::kEvaluation);
 
   using BodyDescriptor =
       FixedBodyDescriptor<kExportsOffset, kHeaderSize, kHeaderSize>;
@@ -163,6 +164,30 @@ class JSModuleNamespace
       kHeaderSize + (kTaggedSize * kInObjectFieldCount);
 
   TQ_OBJECT_CONSTRUCTORS(JSModuleNamespace)
+};
+
+class JSDeferredModuleNamespace
+    : public TorqueGeneratedJSDeferredModuleNamespace<JSDeferredModuleNamespace,
+                                                      JSModuleNamespace> {
+ public:
+  DECL_PRINTER(JSDeferredModuleNamespace)
+
+  // In-object fields.
+  enum {
+    kToStringTagFieldIndex,
+    kInObjectFieldCount,
+  };
+
+  static void EvaluateModuleSync(
+      Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder);
+  static bool MaybeEvaluateDeferredModule(LookupIterator* it);
+
+  // We need to include in-object fields
+  // TODO(v8:8944): improve handling of in-object fields
+  static constexpr int kSize =
+      kHeaderSize + (kTaggedSize * kInObjectFieldCount);
+
+  TQ_OBJECT_CONSTRUCTORS(JSDeferredModuleNamespace)
 };
 
 V8_OBJECT class ScriptOrModule : public StructLayout {

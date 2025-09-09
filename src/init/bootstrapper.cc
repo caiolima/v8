@@ -4563,6 +4563,27 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
     }
   }
 
+  {  // -- J S D e f e r r e d M o d u l e N a m e s p a c e
+    DirectHandle<Map> map = factory->NewContextfulMapForCurrentContext(
+        JS_DEFERRED_MODULE_NAMESPACE_TYPE, JSDeferredModuleNamespace::kSize,
+        TERMINAL_FAST_ELEMENTS_KIND,
+        JSDeferredModuleNamespace::kInObjectFieldCount);
+    map->SetConstructor(native_context()->object_function());
+    Map::SetPrototype(isolate(), map, isolate_->factory()->null_value());
+    Map::EnsureDescriptorSlack(isolate_, map, 1);
+    native_context()->set_js_deferred_module_namespace_map(*map);
+
+    {  // Install @@toStringTag.
+      PropertyAttributes attribs =
+          static_cast<PropertyAttributes>(DONT_DELETE | DONT_ENUM | READ_ONLY);
+      Descriptor d = Descriptor::DataField(
+          isolate(), factory->to_string_tag_symbol(),
+          JSDeferredModuleNamespace::kToStringTagFieldIndex, attribs,
+          Representation::Tagged());
+      map->AppendDescriptor(isolate(), &d);
+    }
+  }
+
   {  // -- I t e r a t o r and helpers
     DirectHandle<JSObject> iterator_prototype(
         native_context()->initial_iterator_prototype(), isolate());
