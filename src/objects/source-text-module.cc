@@ -266,8 +266,9 @@ MaybeHandle<Cell> SourceTextModule::ResolveImport(
       cell->set_value(module->requested_modules()->get(module_request_index));
       return cell;
     }
+    case ModuleImportPhase::kDefer:
     case ModuleImportPhase::kEvaluation: {
-      DCHECK_EQ(module_request->phase(), ModuleImportPhase::kEvaluation);
+      //DCHECK_EQ(module_request->phase(), ModuleImportPhase::kEvaluation);
       Handle<Module> requested_module(
           Cast<Module>(module->requested_modules()->get(module_request_index)),
           isolate);
@@ -363,6 +364,7 @@ bool SourceTextModule::PrepareInstantiate(
     DirectHandle<FixedArray> import_attributes(
         module_request->import_attributes(), isolate);
     switch (module_request->phase()) {
+      case ModuleImportPhase::kDefer:
       case ModuleImportPhase::kEvaluation: {
         v8::Local<v8::Module> api_requested_module;
         if (callbacks.module_callback != nullptr) {
@@ -423,7 +425,7 @@ bool SourceTextModule::PrepareInstantiate(
   for (int i = 0, length = requested_modules->length(); i < length; ++i) {
     DirectHandle<ModuleRequest> module_request(
         Cast<ModuleRequest>(module_requests->get(i)), isolate);
-    if (module_request->phase() != ModuleImportPhase::kEvaluation) {
+    if (module_request->phase() == ModuleImportPhase::kSource) {
       continue;
     }
     DirectHandle<Module> requested_module(
@@ -599,7 +601,7 @@ bool SourceTextModule::FinishInstantiate(
   for (int i = 0, length = requested_modules->length(); i < length; ++i) {
     DirectHandle<ModuleRequest> module_request(
         Cast<ModuleRequest>(module_requests->get(i)), isolate);
-    if (module_request->phase() != ModuleImportPhase::kEvaluation) {
+    if (module_request->phase() == ModuleImportPhase::kSource) {
       continue;
     }
     Handle<Module> requested_module(Cast<Module>(requested_modules->get(i)),
@@ -809,10 +811,11 @@ void SourceTextModule::GatherAvailableAncestors(
 DirectHandle<JSModuleNamespace> SourceTextModule::GetModuleNamespace(
     Isolate* isolate, DirectHandle<SourceTextModule> module,
     int module_request) {
-  DCHECK_EQ(Cast<ModuleRequest>(
+  DCHECK_NE(Cast<ModuleRequest>(
                 module->info()->module_requests()->get(module_request))
                 ->phase(),
-            ModuleImportPhase::kEvaluation);
+            ModuleImportPhase::kSource);
+
   Handle<Module> requested_module(
       Cast<Module>(module->requested_modules()->get(module_request)), isolate);
   return Module::GetModuleNamespace(isolate, requested_module);
@@ -1249,6 +1252,8 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
     DirectHandle<ModuleRequest> module_request(
         Cast<ModuleRequest>(module_requests->get(i)), isolate);
     if (module_request->phase() != ModuleImportPhase::kEvaluation) {
+      // TODO(caiolima): add here the logic to get all async requests of a kDefer phase
+      // to eargerly execute them.
       continue;
     }
     // b. If requiredModule.[[Phase]] is evaluation, then
