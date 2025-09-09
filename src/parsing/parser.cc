@@ -1581,6 +1581,7 @@ void Parser::ParseImportDeclaration() {
   //       AssertClause ';'
   //   'import' ModuleSpecifier [no LineTerminator here] AssertClause';'
   //   'import' 'source' ImportedBinding 'from' ModuleSpecifier ';'
+  //   'import' 'defer'  NameSpaceImport FromClause WithClause_opt ';'
   //
   // ImportClause :
   //   ImportedDefaultBinding
@@ -1619,18 +1620,16 @@ void Parser::ParseImportDeclaration() {
         PeekAheadAhead() == Token::kIdentifier) {
       Consume(Token::kIdentifier);
       import_phase = ModuleImportPhase::kSource;
-
-      import_default_binding = ParseNonRestrictedIdentifier();
-      import_default_binding_loc = scanner()->location();
-      DeclareUnboundVariable(import_default_binding, VariableMode::kConst,
-                            kNeedsInitialization, pos);
     } else if (v8_flags.js_defer_import_eval &&
                PeekContextualKeyword(ast_value_factory()->defer_string()) &&
                PeekAhead() == Token::kMul &&
                PeekAheadAhead() == Token::kIdentifier) {
       Consume(Token::kIdentifier);
       import_phase = ModuleImportPhase::kDefer;
-    } else {
+    }
+
+    // 'import defer' is only allowed with namespaced import
+    if (import_phase != ModuleImportPhase::kDefer) {
       import_default_binding = ParseNonRestrictedIdentifier();
       import_default_binding_loc = scanner()->location();
       DeclareUnboundVariable(import_default_binding, VariableMode::kConst,
