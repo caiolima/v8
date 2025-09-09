@@ -10,6 +10,7 @@ extern class Module extends HeapObject {
   hash: Smi;
   status: Smi;
   module_namespace: JSModuleNamespace|Undefined;
+  deferred_module_namespace: JSModuleNamespace|Undefined;
   // The exception in the case {status} is kErrored.
   exception: Object;
   // The top level promise capability of this module. Will only be defined
@@ -17,8 +18,14 @@ extern class Module extends HeapObject {
   top_level_capability: JSPromise|Undefined;
 }
 
+bitfield struct JSModuleNamespaceFlags extends uint32 {
+  deferred_evaluation: bool: 1 bit;
+  // 7 bits available for future flags
+}
+
 extern class JSModuleNamespace extends JSSpecialObject {
   module: Module;
+  flags: JSModuleNamespaceFlags;
 }
 
 extern class ScriptOrModule extends Struct {

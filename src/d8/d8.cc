@@ -1765,10 +1765,11 @@ void Shell::DoHostImportModuleDynamically(void* data) {
                 ->InstantiateModule(realm, ResolveModuleCallback,
                                     ResolveModuleSourceCallback)
                 .FromMaybe(false)) {
+
           MaybeLocal<Value> maybe_result = root_module->Evaluate(realm);
           if (maybe_result.IsEmpty()) break;
           global_result_promise.Reset(
-              isolate, maybe_result.ToLocalChecked().As<Promise>());
+            isolate, maybe_result.ToLocalChecked().As<Promise>());
           global_namespace_or_source.Reset(isolate,
                                            root_module->GetModuleNamespace());
         }

@@ -1232,6 +1232,23 @@ MaybeDirectHandle<Object> Object::GetLengthFromArrayLike(
 // static
 MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
                                         bool is_global_reference) {
+  // TODO(ciaolima): Is this the right place to trigger the evaluation?
+  // It looks like yeah, since we want to trigger evaluation even if
+  // it's acessing a undefined property.
+  DirectHandle<JSAny> reciever = it->GetReceiver();
+  if (IsJSModuleNamespace(*reciever)) {
+    DirectHandle<Name> name = it->GetName();
+    Isolate* isolate = it->isolate();
+    DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(reciever);
+    if (ns->deferred_evaluation() &&
+        !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
+        !IsSymbol(*name)) {
+      JSModuleNamespace::EvaluateDeferredModule(
+                it->isolate(), ns);
+      RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+    }
+  }
+
   for (;; it->Next()) {
     switch (it->state()) {
       case LookupIterator::TRANSITION:

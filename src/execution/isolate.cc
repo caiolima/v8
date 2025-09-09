@@ -6716,7 +6716,7 @@ MaybeDirectHandle<JSPromise> Isolate::RunHostImportModuleDynamicallyCallback(
         return NewRejectedPromise(this, api_context, exception);
       }
       break;
-    case ModuleImportPhase::kDefer:
+    default:
       UNREACHABLE();
   }
 

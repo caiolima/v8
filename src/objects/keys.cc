@@ -1039,6 +1039,20 @@ ExceptionStatus CollectKeysFromDictionary(DirectHandle<Dictionary> dictionary,
 
 Maybe<bool> KeyAccumulator::CollectOwnPropertyNames(
     DirectHandle<JSReceiver> receiver, DirectHandle<JSObject> object) {
+
+  // TODO(caiolima): Is this also the right place to check for
+  // OwnPropertyKeys?
+  if (IsJSModuleNamespace(*object)) {
+    // Simulate [[GetOwnProperty]] for establishing enumerability, which
+    // throws for uninitialized exports.
+
+    DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(object);
+    if (ns->deferred_evaluation()) {
+      JSModuleNamespace::EvaluateDeferredModule(isolate_, ns);
+      RETURN_VALUE_IF_EXCEPTION(isolate_, Nothing<bool>());
+    }
+  }
+
   if (filter_ == ENUMERABLE_STRINGS) {
     DirectHandle<FixedArray> enum_keys;
     if (object->HasFastProperties()) {

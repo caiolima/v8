@@ -3507,6 +3507,8 @@ DirectHandle<SourceTextModule> Factory::NewSourceTextModule(
   module->set_regular_imports(*regular_imports);
   module->set_hash(isolate()->GenerateIdentityHash(Smi::kMaxValue));
   module->set_module_namespace(roots.undefined_value(), SKIP_WRITE_BARRIER);
+  module->set_deferred_module_namespace(roots.undefined_value(),
+                                        SKIP_WRITE_BARRIER);
   module->set_requested_modules(*requested_modules);
   module->set_status(Module::kUnlinked);
   module->set_exception(roots.the_hole_value(), SKIP_WRITE_BARRIER);
@@ -3540,6 +3542,8 @@ Handle<SyntheticModule> Factory::NewSyntheticModule(
   DisallowGarbageCollection no_gc;
   module->set_hash(isolate()->GenerateIdentityHash(Smi::kMaxValue));
   module->set_module_namespace(roots.undefined_value(), SKIP_WRITE_BARRIER);
+  module->set_deferred_module_namespace(roots.undefined_value(),
+                                        SKIP_WRITE_BARRIER);
   module->set_status(Module::kUnlinked);
   module->set_exception(roots.the_hole_value(), SKIP_WRITE_BARRIER);
   module->set_top_level_capability(roots.undefined_value(), SKIP_WRITE_BARRIER);

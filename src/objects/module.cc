@@ -161,7 +161,8 @@ void Module::Reset(Isolate* isolate, DirectHandle<Module> module) {
   // The namespace object cannot exist, because it would have been created
   // by RunInitializationCode, which is called only after this module's SCC
   // succeeds instantiation.
-  DCHECK(!IsJSModuleNamespace(module->module_namespace()));
+  DCHECK(!IsJSModuleNamespace(module->module_namespace()) &&
+         !IsJSModuleNamespace(module->deferred_module_namespace()));
   const int export_count =
       IsSourceTextModule(*module)
           ? Cast<SourceTextModule>(*module)->regular_exports()->length()
@@ -317,8 +318,13 @@ MaybeDirectHandle<Object> Module::Evaluate(Isolate* isolate,
 }
 
 DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
-    Isolate* isolate, Handle<Module> module) {
-  DirectHandle<HeapObject> object(module->module_namespace(), isolate);
+    Isolate* isolate, Handle<Module> module, ModuleImportPhase phase) {
+  DCHECK(phase == ModuleImportPhase::kEvaluation ||
+         phase == ModuleImportPhase::kDefer);
+  Tagged<HeapObject> module_ns = phase == ModuleImportPhase::kDefer
+                                     ? module->deferred_module_namespace()
+                                     : module->module_namespace();
+  DirectHandle<HeapObject> object(module_ns, isolate);
   ReadOnlyRoots roots(isolate);
   if (!IsUndefined(*object, roots)) {
     // Namespace object already exists.
@@ -355,7 +361,13 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   DirectHandle<JSModuleNamespace> ns =
       isolate->factory()->NewJSModuleNamespace();
   ns->set_module(*module);
-  module->set_module_namespace(*ns);
+  if (phase == ModuleImportPhase::kEvaluation) {
+    module->set_module_namespace(*ns);
+  } else {
+    DCHECK(phase == ModuleImportPhase::kDefer);
+    module->set_deferred_module_namespace(*ns);
+  }
+  ns->set_deferred_evaluation(phase == ModuleImportPhase::kDefer);
 
   // Create the properties in the namespace object. Transition the object
   // to dictionary mode so that property addition is faster.
@@ -440,6 +452,38 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
   }
 
   return Just(it->property_attributes());
+}
+
+void JSModuleNamespace::EvaluateDeferredModule(
+    Isolate* isolate, DirectHandle<JSModuleNamespace> holder) {
+  PrintF("Deferred execution.\n");
+  Tagged<Module> module = holder->module();
+
+  Zone zone(isolate->allocator(), ZONE_NAME);
+  UnorderedModuleSet seenModules(&zone);
+  if (!SourceTextModule::ReadyForSyncExecution(
+          isolate, handle(module, isolate), &seenModules)) {
+    isolate->Throw(*isolate->factory()->NewTypeError(
+        MessageTemplate::kNonEvaluatedDependency));
+    return;
+  }
+
+  MaybeDirectHandle<Object> maybe_result =
+      Module::Evaluate(isolate, handle(module, isolate));
+  DirectHandle<Object> result;
+  if (!maybe_result.ToHandle(&result)) {
+    return;
+  }
+
+  // Check if the result is a rejected promise
+  if (IsJSPromise(*result)) {
+    DirectHandle<JSPromise> promise = Cast<JSPromise>(result);
+    if (promise->status() == Promise::kRejected) {
+      isolate->Throw(promise->result());
+      return;
+    }
+    CHECK_EQ(promise->status(), Promise::kFulfilled);
+  }
 }
 
 // ES
