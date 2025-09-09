@@ -594,6 +594,8 @@ void CallPrinter::VisitImportCallExpression(ImportCallExpression* node) {
   Print("import");
   if (node->phase() == ModuleImportPhase::kSource) {
     Print(".source");
+  } else if (node->phase() == ModuleImportPhase::kDefer) {
+    Print(".defer");
   }
   Print("(");
   Find(node->specifier(), true);
