@@ -121,6 +121,7 @@ Tagged<Object> ObjectLookupAccessor(Isolate* isolate,
     switch (it.state()) {
       case LookupIterator::INTERCEPTOR:
       case LookupIterator::TRANSITION:
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
         UNREACHABLE();
 
       case LookupIterator::ACCESS_CHECK:

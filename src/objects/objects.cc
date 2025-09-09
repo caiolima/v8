@@ -1331,6 +1331,10 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
       case LookupIterator::ACCESS_CHECK:
         if (it->HasAccess()) continue;
         return JSObject::GetPropertyWithFailedAccessCheck(it);
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
+        return JSDeferredModuleNamespace::GetProperty(
+            it->isolate(), it->GetHolder<JSDeferredModuleNamespace>(),
+            it->GetName());
       case LookupIterator::ACCESSOR:
         return GetPropertyWithAccessor(it);
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
@@ -2509,6 +2513,8 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
 
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         return WriteToReadOnlyProperty(it, value, should_throw);
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
+        UNREACHABLE();
     }
     UNREACHABLE();
   }
@@ -2650,6 +2656,7 @@ Maybe<bool> Object::SetSuperProperty(LookupIterator* it,
         RETURN_FAILURE(it->isolate(), kThrowOnError,
                        NewTypeError(MessageTemplate::kWasmObjectsAreOpaque));
 
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::TRANSITION:
         UNREACHABLE();
     }

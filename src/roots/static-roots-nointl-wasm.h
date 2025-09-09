@@ -1448,6 +1448,7 @@ static constexpr std::array<Tagged_t, 905> StaticReadOnlyRootsPointerTable = {
     StaticReadOnlyRoot::kdaysInYear_string,
     StaticReadOnlyRoot::kdefault_string,
     StaticReadOnlyRoot::kdefer_string,
+    StaticReadOnlyRoot::kDeferred_Module_string,
     StaticReadOnlyRoot::kdefineProperty_string,
     StaticReadOnlyRoot::kdeleteProperty_string,
     StaticReadOnlyRoot::kdetached_string,

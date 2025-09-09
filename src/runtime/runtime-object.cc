@@ -258,6 +258,7 @@ RUNTIME_FUNCTION(Runtime_HasOwnConstDataProperty) {
       case LookupIterator::ACCESSOR:
         return ReadOnlyRoots(isolate).undefined_value();
 
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
     }

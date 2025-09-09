@@ -101,6 +101,7 @@ namespace v8::internal {
 Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
   for (;; it->Next()) {
     switch (it->state()) {
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
@@ -170,6 +171,7 @@ Handle<Object> JSReceiver::GetDataProperty(LookupIterator* it,
         // access to access-checked objects in that case.
         if (!it->isolate()->context().is_null() && it->HasAccess()) continue;
         [[fallthrough]];
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::JSPROXY:
         it->NotFound();
         return it->isolate()->factory()->undefined_value();
@@ -230,6 +232,7 @@ Maybe<bool> JSReceiver::CheckPrivateNameStore(LookupIterator* it,
       Cast<String>(Cast<Symbol>(it->GetName())->description()), isolate);
   for (;; it->Next()) {
     switch (it->state()) {
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::TRANSITION:
       case LookupIterator::INTERCEPTOR:
       case LookupIterator::JSPROXY:
@@ -744,6 +747,7 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
     LookupIterator* it) {
   for (;; it->Next()) {
     switch (it->state()) {
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
@@ -967,6 +971,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
 
   for (;; it->Next()) {
     switch (it->state()) {
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::JSPROXY:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
@@ -1845,6 +1850,7 @@ Maybe<bool> JSReceiver::AddPrivateField(LookupIterator* it,
     case LookupIterator::WASM_OBJECT:
       RETURN_FAILURE(isolate, kThrowOnError,
                      NewTypeError(MessageTemplate::kWasmObjectsAreOpaque));
+    case LookupIterator::DEFERRED_MODULE_NAMESPACE:
     case LookupIterator::DATA:
     case LookupIterator::INTERCEPTOR:
     case LookupIterator::ACCESSOR:
@@ -2622,6 +2628,8 @@ int JSObject::GetHeaderSize(InstanceType type,
       return JSIteratorConcatHelper::kHeaderSize;
     case JS_MODULE_NAMESPACE_TYPE:
       return JSModuleNamespace::kHeaderSize;
+    case JS_DEFERRED_MODULE_NAMESPACE_TYPE:
+      return JSDeferredModuleNamespace::kHeaderSize;
     case JS_SHARED_ARRAY_TYPE:
       return JSSharedArray::kHeaderSize;
     case JS_SHARED_STRUCT_TYPE:
@@ -3719,6 +3727,7 @@ Maybe<bool> JSObject::DefineOwnPropertyIgnoreAttributes(
 
   for (;; it->Next()) {
     switch (it->state()) {
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::JSPROXY:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:

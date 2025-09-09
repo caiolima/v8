@@ -229,6 +229,7 @@ static void LookupForRead(LookupIterator* it, bool is_has_property) {
       case LookupIterator::DATA:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
       case LookupIterator::NOT_FOUND:
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
         return;
     }
     UNREACHABLE();
@@ -877,6 +878,14 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
       handler = MaybeObjectHandle(
           LoadHandler::LoadNonExistent(isolate(), lookup_start_object_map()));
     }
+  } else if (lookup->state() == LookupIterator::DEFERRED_MODULE_NAMESPACE) {
+    DirectHandle<JSDeferredModuleNamespace> holder =
+        lookup->GetHolder<JSDeferredModuleNamespace>();
+    if (holder->module()->status() != Module::kEvaluated) {
+      // If the module wasn't evaluated yet, let's return and try to cache it
+      // later.
+      return;
+    }
   } else if (IsLoadGlobalIC() && lookup->state() == LookupIterator::JSPROXY) {
     // If there is proxy just install the slow stub since we need to call the
     // HasProperty trap for global loads. The ProxyGetProperty builtin doesn't
@@ -993,6 +1002,31 @@ MaybeObjectHandle LoadIC::ComputeHandler(LookupIterator* lookup) {
           {},  // no data1 (make it use holder instead).
           MaybeObjectDirectHandle(interceptor_info));
       return MaybeObjectHandle(handler);
+    }
+
+    case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
+      DirectHandle<JSDeferredModuleNamespace> holder =
+          lookup->GetHolder<JSDeferredModuleNamespace>();
+      DCHECK(Cast<JSModuleNamespace>(holder)->module()->status() ==
+             Module::kEvaluated);
+      DirectHandle<ObjectHashTable> exports(
+          Cast<JSModuleNamespace>(holder)->module()->exports(), isolate());
+      InternalIndex entry =
+          exports->FindEntry(isolate(), roots, lookup->name(),
+                             Smi::ToInt(Object::GetHash(*lookup->name())));
+      if (entry.is_found()) {
+        int value_index = ObjectHashTable::EntryToValueIndex(entry);
+        Handle<Smi> smi_handler =
+            LoadHandler::LoadModuleExport(isolate(), value_index);
+        if (holder_is_lookup_start_object) {
+          return MaybeObjectHandle(smi_handler);
+        }
+        return MaybeObjectHandle(LoadHandler::LoadFromPrototype(
+            isolate(), map, holder, *smi_handler));
+      }
+      TRACE_HANDLER_STATS(isolate(), LoadIC_LoadNonexistentDH);
+      return MaybeObjectHandle(
+          LoadHandler::LoadNonExistent(isolate(), lookup_start_object_map()));
     }
 
     case LookupIterator::ACCESSOR: {
@@ -1732,6 +1766,8 @@ bool StoreIC::LookupForWrite(LookupIterator* it, DirectHandle<Object> value,
         continue;  // Continue to the prototype, if present.
       case LookupIterator::JSPROXY:
         return true;
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
+        return false;
       case LookupIterator::INTERCEPTOR: {
         DirectHandle<JSObject> holder = it->GetHolder<JSObject>();
         Tagged<InterceptorInfo> info = holder->GetNamedInterceptor();
@@ -1903,6 +1939,7 @@ Maybe<bool> DefineOwnDataProperty(LookupIterator* it,
     // while the object is already prepared for TRANSITION.
     case LookupIterator::TRANSITION: {
       switch (original_state) {
+        case LookupIterator::DEFERRED_MODULE_NAMESPACE:
         case LookupIterator::JSPROXY:
         case LookupIterator::WASM_OBJECT:
         case LookupIterator::TRANSITION:
@@ -1922,6 +1959,7 @@ Maybe<bool> DefineOwnDataProperty(LookupIterator* it,
                                          EnforceDefineSemantics::kDefine);
       }
     }
+    case LookupIterator::DEFERRED_MODULE_NAMESPACE:
     case LookupIterator::ACCESS_CHECK:
     case LookupIterator::NOT_FOUND:
     case LookupIterator::DATA:
@@ -2364,6 +2402,7 @@ MaybeObjectHandle StoreIC::ComputeHandler(LookupIterator* lookup) {
           isolate(), lookup_start_object_map(), holder, receiver));
     }
 
+    case LookupIterator::DEFERRED_MODULE_NAMESPACE:
     case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
     case LookupIterator::ACCESS_CHECK:
     case LookupIterator::NOT_FOUND:
@@ -4069,6 +4108,7 @@ bool MaybeCanCloneObjectForObjectAssign(DirectHandle<JSReceiver> source,
         }
         continue;
 
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::INTERCEPTOR:
       case LookupIterator::TRANSITION:
       case LookupIterator::ACCESS_CHECK:

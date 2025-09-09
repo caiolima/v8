@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "include/v8-template.h"
 #include "src/api/api-inl.h"
 #include "src/ast/modules.h"
 #include "src/builtins/accessors.h"
@@ -161,7 +162,8 @@ void Module::Reset(Isolate* isolate, DirectHandle<Module> module) {
   // The namespace object cannot exist, because it would have been created
   // by RunInitializationCode, which is called only after this module's SCC
   // succeeds instantiation.
-  DCHECK(!IsJSModuleNamespace(module->module_namespace()));
+  DCHECK(!IsJSModuleNamespace(module->module_namespace()) &&
+         !IsJSModuleNamespace(module->deferred_module_namespace()));
   const int export_count =
       IsSourceTextModule(*module)
           ? Cast<SourceTextModule>(*module)->regular_exports()->length()
@@ -316,8 +318,13 @@ MaybeDirectHandle<Object> Module::Evaluate(Isolate* isolate,
 }
 
 DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
-    Isolate* isolate, Handle<Module> module) {
-  DirectHandle<HeapObject> object(module->module_namespace(), isolate);
+    Isolate* isolate, Handle<Module> module, ModuleImportPhase phase) {
+  DCHECK(phase == ModuleImportPhase::kEvaluation ||
+         phase == ModuleImportPhase::kDefer);
+  Tagged<HeapObject> module_ns = phase == ModuleImportPhase::kEvaluation
+                                     ? module->module_namespace()
+                                     : module->deferred_module_namespace();
+  DirectHandle<HeapObject> object(module_ns, isolate);
   ReadOnlyRoots roots(isolate);
   if (!IsUndefined(*object, roots)) {
     // Namespace object already exists.
@@ -333,51 +340,57 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
                                        &zone, &visited);
   }
 
-  DirectHandle<ObjectHashTable> exports(module->exports(), isolate);
-  ZoneVector<IndirectHandle<String>> names(&zone);
-  names.reserve(exports->NumberOfElements());
-  for (InternalIndex i : exports->IterateEntries()) {
-    Tagged<Object> key;
-    if (!exports->ToKey(roots, i, &key)) continue;
-    names.push_back(handle(Cast<String>(key), isolate));
-  }
-  DCHECK_EQ(static_cast<int>(names.size()), exports->NumberOfElements());
-
-  // Sort them alphabetically.
-  std::sort(names.begin(), names.end(),
-            [&isolate](IndirectHandle<String> a, IndirectHandle<String> b) {
-              return String::Compare(isolate, a, b) ==
-                     ComparisonResult::kLessThan;
-            });
-
   // Create the namespace object (initially empty).
   DirectHandle<JSModuleNamespace> ns =
-      isolate->factory()->NewJSModuleNamespace();
+      phase == ModuleImportPhase::kEvaluation
+          ? isolate->factory()->NewJSModuleNamespace()
+          : isolate->factory()->NewJSDeferredModuleNamespace();
   ns->set_module(*module);
-  module->set_module_namespace(*ns);
-
-  // Create the properties in the namespace object. Transition the object
-  // to dictionary mode so that property addition is faster.
-  PropertyAttributes attr = DONT_DELETE;
-  JSObject::NormalizeProperties(isolate, ns, CLEAR_INOBJECT_PROPERTIES,
-                                static_cast<int>(names.size()),
-                                "JSModuleNamespace");
-  JSObject::NormalizeElements(isolate, ns);
-  for (const auto& name : names) {
-    uint32_t index = 0;
-    if (name->AsArrayIndex(&index)) {
-      JSObject::SetNormalizedElement(
-          ns, index, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
-          PropertyDetails(PropertyKind::kAccessor, attr,
-                          PropertyCellType::kMutable));
-    } else {
-      JSObject::SetNormalizedProperty(
-          ns, name, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
-          PropertyDetails(PropertyKind::kAccessor, attr,
-                          PropertyCellType::kMutable));
+  if (phase == ModuleImportPhase::kEvaluation) {
+    module->set_module_namespace(*ns);
+    DirectHandle<ObjectHashTable> exports(module->exports(), isolate);
+    ZoneVector<IndirectHandle<String>> names(&zone);
+    names.reserve(exports->NumberOfElements());
+    for (InternalIndex i : exports->IterateEntries()) {
+      Tagged<Object> key;
+      if (!exports->ToKey(roots, i, &key)) continue;
+      names.push_back(handle(Cast<String>(key), isolate));
     }
+    DCHECK_EQ(static_cast<int>(names.size()), exports->NumberOfElements());
+
+    // Sort them alphabetically.
+    std::sort(names.begin(), names.end(),
+              [&isolate](IndirectHandle<String> a, IndirectHandle<String> b) {
+                return String::Compare(isolate, a, b) ==
+                       ComparisonResult::kLessThan;
+              });
+
+    // Create the properties in the namespace object. Transition the object
+    // to dictionary mode so that property addition is faster.
+    PropertyAttributes attr = DONT_DELETE;
+    JSObject::NormalizeProperties(isolate, ns, CLEAR_INOBJECT_PROPERTIES,
+                                  static_cast<int>(names.size()),
+                                  "JSModuleNamespace");
+    JSObject::NormalizeElements(isolate, ns);
+    for (const auto& name : names) {
+      uint32_t index = 0;
+      if (name->AsArrayIndex(&index)) {
+        JSObject::SetNormalizedElement(
+            ns, index, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
+            PropertyDetails(PropertyKind::kAccessor, attr,
+                            PropertyCellType::kMutable));
+      } else {
+        JSObject::SetNormalizedProperty(
+            ns, name, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
+            PropertyDetails(PropertyKind::kAccessor, attr,
+                            PropertyCellType::kMutable));
+      }
+    }
+    JSObject::PreventExtensions(isolate, ns, kThrowOnError).ToChecked();
+  } else {
+    DCHECK(phase == ModuleImportPhase::kDefer);
+    module->set_deferred_module_namespace(*ns);
   }
-  JSObject::PreventExtensions(isolate, ns, kThrowOnError).ToChecked();
 
   // Optimize the namespace object as a prototype, for two reasons:
   // - The object's map is guaranteed not to be shared. ICs rely on this.
@@ -439,6 +452,63 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
   }
 
   return Just(it->property_attributes());
+}
+
+// https://tc39.es/proposal-defer-import-eval/#sec-EvaluateModuleSync
+void JSDeferredModuleNamespace::EvaluateModuleSync(
+    Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder) {
+  Handle<Module> module = handle(holder->module(), isolate);
+
+  // https://tc39.es/proposal-defer-import-eval/#sec-GetModuleExportsList
+  Zone zone(isolate->allocator(), ZONE_NAME);
+  UnorderedModuleSet seenModules(&zone);
+  if (!SourceTextModule::ReadyForSyncExecution(isolate, module, &seenModules)) {
+    isolate->Throw(*isolate->factory()->NewTypeError(
+        MessageTemplate::kNotReadyForSyncExec));
+    return;
+  }
+
+  MaybeDirectHandle<Object> maybe_result = Module::Evaluate(isolate, module);
+  DirectHandle<Object> result;
+  if (!maybe_result.ToHandle(&result)) {
+    return;
+  }
+
+  // If there's a result, it needs to be a promise with either Reject or
+  // Fulfilled status.
+  DCHECK(IsJSPromise(*result));
+  DirectHandle<JSPromise> promise = Cast<JSPromise>(result);
+  // 5. If promise.[[PromiseState]] is rejected, then
+  if (promise->status() == Promise::kRejected) {
+    // a. If promise.[[PromiseIsHandled]] is false, perform
+    // HostPromiseRejectionTracker(promise, "handle").
+    if (!promise->has_handler()) {
+      isolate->ReportPromiseReject(promise, DirectHandle<Object>(),
+                                   v8::kPromiseHandlerAddedAfterReject);
+    }
+    promise->set_has_handler(true);
+    isolate->Throw(promise->result());
+    return;
+  }
+  DCHECK_EQ(promise->status(), Promise::kFulfilled);
+}
+
+void JSDeferredModuleNamespace::MaybeEvaluate(
+    Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> ns) {
+  Handle<Module> module = handle(ns->module(), isolate);
+  if (module->status() == Module::kEvaluated) {
+    return;
+  }
+  JSDeferredModuleNamespace::EvaluateModuleSync(isolate, ns);
+}
+
+bool JSDeferredModuleNamespace::TriggersEvaluation(Isolate* isolate,
+                                                   DirectHandle<Name> name) {
+  if (Name::Equals(isolate, name, isolate->factory()->then_string()) ||
+      IsSymbol(*name)) {
+    return false;
+  }
+  return true;
 }
 
 // ES
@@ -522,6 +592,17 @@ bool Module::IsGraphAsync(Isolate* isolate) const {
   } while (!worklist.empty());
 
   return false;
+}
+
+MaybeHandle<Object> JSDeferredModuleNamespace::GetProperty(
+    Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder,
+    DirectHandle<Name> name) {
+  JSDeferredModuleNamespace::MaybeEvaluate(isolate, holder);
+  RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+  DirectHandle<Object> result;
+  ASSIGN_RETURN_ON_EXCEPTION(isolate, result,
+                             holder->GetExport(isolate, Cast<String>(name)));
+  return Handle<Object>(*result, isolate);
 }
 
 }  // namespace internal

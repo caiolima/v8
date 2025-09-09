@@ -75,6 +75,7 @@ MaybeDirectHandle<Object> HasEnumerableProperty(
           return it.GetName();
         }
       }
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
       case LookupIterator::WASM_OBJECT:
