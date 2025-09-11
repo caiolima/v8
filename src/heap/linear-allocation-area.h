@@ -9,6 +9,7 @@
 // Avoid including src/heap/ internals.
 #include "include/v8-internal.h"
 #include "src/common/checks.h"
+#include "src/utils/utils.h"
 
 namespace v8::internal {
 
@@ -25,6 +26,9 @@ class LinearAllocationArea final {
   }
 
   void Reset(Address top, Address limit) {
+    PrintF("Debug LAB: Reset LAB: start=%p, top=%p, limit=%p\n",
+           reinterpret_cast<void*>(top), reinterpret_cast<void*>(top),
+           reinterpret_cast<void*>(limit));
     start_ = top;
     top_ = top;
     limit_ = limit;
@@ -41,6 +45,8 @@ class LinearAllocationArea final {
   V8_INLINE Address IncrementTop(size_t bytes) {
     Address old_top = top_;
     top_ += bytes;
+    PrintF("Debug LAB: IncrementTop by %zu: %p -> %p\n", bytes,
+           reinterpret_cast<void*>(old_top), reinterpret_cast<void*>(top_));
     Verify();
     return old_top;
   }
@@ -48,7 +54,10 @@ class LinearAllocationArea final {
   V8_INLINE bool DecrementTopIfAdjacent(Address new_top, size_t bytes) {
     Verify();
     if ((new_top + bytes) == top_) {
+      Address old_top = top_;
       top_ = new_top;
+      PrintF("Debug LAB: DecrementTop by %zu: %p -> %p\n", bytes,
+             reinterpret_cast<void*>(old_top), reinterpret_cast<void*>(top_));
       if (start_ > top_) {
         ResetStart();
       }

@@ -8,6 +8,9 @@
 #include <cstdint>
 #include <unordered_set>
 #include <vector>
+#include <unordered_map>
+#include <atomic>
+#include <mutex>
 
 #include "src/common/globals.h"
 
@@ -115,6 +118,36 @@ class V8_EXPORT_PRIVATE V8_NODISCARD PauseAllocationObserversScope {
       const PauseAllocationObserversScope&) = delete;
 
  private:
+  Heap* heap_;
+};
+
+// FIXME: I'm also not sure if this should be the place for this observer. Maybe
+// it should be in either Isolate or in Heap files.
+class V8_EXPORT_PRIVATE TotalAllocationTracker final : public AllocationObserver {
+ public:
+  explicit TotalAllocationTracker(Heap* heap) : AllocationObserver(1) {
+    heap_ = heap;
+  }
+  TotalAllocationTracker(const TotalAllocationTracker&) = delete;
+  TotalAllocationTracker& operator=(const TotalAllocationTracker&) = delete;
+
+  size_t total_allocated_bytes() const {
+    return total_bytes_allocated_.load(std::memory_order_relaxed);
+  }
+
+  // Get allocations by space ID
+  std::unordered_map<AllocationSpace, size_t> GetAllocationsBySpace() const;
+
+  // Print allocation breakdown by space
+  void PrintSpaceBreakdown() const;
+
+ protected:
+  void Step(int bytes_allocated, Address soon_object, size_t size) override;
+
+ private:
+  std::atomic<size_t> total_bytes_allocated_{0};
+  mutable std::mutex space_allocations_mutex_;
+  std::unordered_map<AllocationSpace, std::atomic<size_t>> space_allocations_;
   Heap* heap_;
 };
 

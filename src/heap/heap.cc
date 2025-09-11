@@ -1025,7 +1025,7 @@ size_t Heap::SizeOfObjects() {
 
   for (SpaceIterator it(this); it.HasNext();) {
     Space* space = it.Next();
-    PrintF("Space: %s, Heap Usage: %zu\n", ToString(space->identity()), space->SizeOfObjects());
+    //PrintF("Space: %s, Heap Usage: %zu\n", ToString(space->identity()), space->SizeOfObjects());
     total += space->SizeOfObjects();
   }
   return total;

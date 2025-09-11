@@ -95,8 +95,11 @@ AllocationResult MainAllocator::AllocateFastAligned(
 
 bool MainAllocator::TryFreeLast(Address object_address, int object_size) {
   if (top() != kNullAddress) {
-    return allocation_info().DecrementTopIfAdjacent(object_address,
-                                                    object_size);
+    PrintF("Debug AllocationInfo size before DecrementTopIfAdjacent: %zu\n", allocation_info().top() - allocation_info().start());
+    bool result =
+        allocation_info().DecrementTopIfAdjacent(object_address, object_size);
+    PrintF("Debug AllocationInfo size after DecrementTopIfAdjacent: %zu\n", allocation_info().top() - allocation_info().start());
+    return result;
   }
   return false;
 }

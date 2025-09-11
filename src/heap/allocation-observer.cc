@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/heap/allocation-observer.h"
+#include "src/heap/memory-chunk-metadata-inl.h"
 
 #include <algorithm>
 
@@ -168,6 +169,47 @@ PauseAllocationObserversScope::PauseAllocationObserversScope(Heap* heap)
 PauseAllocationObserversScope::~PauseAllocationObserversScope() {
   heap_->pause_allocation_observers_depth_--;
   heap_->allocator()->ResumeAllocationObservers();
+}
+
+void TotalAllocationTracker::Step(int bytes_allocated, Address soon_object,
+                                  size_t size) {
+  if (soon_object != kNullAddress) {
+    // Track total allocations
+    total_bytes_allocated_.fetch_add(size, std::memory_order_relaxed);
+
+    // Track per-space allocations
+    AllocationSpace space_id = MemoryChunkMetadata::FromAddress(heap_->isolate(), soon_object)->owner_identity();
+
+    std::lock_guard<std::mutex> lock(space_allocations_mutex_);
+    space_allocations_[space_id].fetch_add(size, std::memory_order_relaxed);
+
+    PrintF("Counting Allocation in %s (Allocation Observer): %zu\n", ToString(space_id), size);
+  } else {
+    PrintF("Filler Object: %zu\n", size);
+  }
+}
+
+std::unordered_map<AllocationSpace, size_t> TotalAllocationTracker::GetAllocationsBySpace() const {
+  std::lock_guard<std::mutex> lock(space_allocations_mutex_);
+  std::unordered_map<AllocationSpace, size_t> result;
+
+  for (const auto& pair : space_allocations_) {
+    result[pair.first] = pair.second.load(std::memory_order_relaxed);
+  }
+
+  return result;
+}
+
+void TotalAllocationTracker::PrintSpaceBreakdown() const {
+  auto allocations = GetAllocationsBySpace();
+
+  PrintF("\n=== Allocation Breakdown by Space (Allocation Observer) ===\n");
+  PrintF("Total allocated: %zu bytes\n", total_allocated_bytes());
+
+  for (const auto& pair : allocations) {
+    const char* space_name = ToString(pair.first);
+    PrintF("  %s: %zu bytes\n", space_name, pair.second);
+  }
 }
 
 }  // namespace internal
