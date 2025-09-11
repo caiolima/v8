@@ -409,7 +409,6 @@ NewSpace::NewSpace(Heap* heap)
     : SpaceWithLinearArea(heap, NEW_SPACE, nullptr) {}
 
 void NewSpace::PromotePageToOldSpace(PageMetadata* page, FreeMode free_mode) {
-  PrintF("Promoting page to old space\n");
   DCHECK(page->will_be_promoted());
   DCHECK(page->Chunk()->InYoungGeneration());
   if (page->is_quarantined()) {

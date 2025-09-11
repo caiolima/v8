@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   v8::V8::InitializePlatform(platform.get());
 
   // Enable GC exposure to JavaScript
-  v8::V8::SetFlagsFromString("--expose-gc --single-threaded-gc --no-concurrent-marking --no-concurrent-sweeping --trace-page-promotions --trace-evacuation");
+  v8::V8::SetFlagsFromString("--expose-gc --single-threaded-gc");
 
   v8::V8::Initialize();
 
@@ -134,14 +134,60 @@ int main(int argc, char* argv[]) {
         }).ToLocalChecked()
     ).ToChecked();
 
+    // Add load function to global context
+    context->Global()->Set(
+        context,
+        v8::String::NewFromUtf8Literal(isolate, "load"),
+        v8::Function::New(context, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+          v8::Isolate* isolate = args.GetIsolate();
+          v8::HandleScope handle_scope(isolate);
+          v8::Local<v8::Context> context = isolate->GetCurrentContext();
+
+          if (args.Length() != 1 || !args[0]->IsString()) {
+            isolate->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(isolate, "load() requires a filename string").ToLocalChecked()));
+            return;
+          }
+
+          v8::String::Utf8Value filename(isolate, args[0]);
+          std::string file_content = ReadFile(*filename);
+
+          if (file_content.empty()) {
+            std::string error = "Error loading file: " + std::string(*filename);
+            isolate->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(isolate, error.c_str()).ToLocalChecked()));
+            return;
+          }
+
+          // Compile and run the loaded script
+          v8::Local<v8::String> source_string =
+              v8::String::NewFromUtf8(isolate, file_content.c_str()).ToLocalChecked();
+          v8::Local<v8::String> filename_string =
+              v8::String::NewFromUtf8(isolate, *filename).ToLocalChecked();
+
+          v8::ScriptOrigin origin(filename_string);
+          v8::Local<v8::Script> script;
+          if (!v8::Script::Compile(context, source_string, &origin).ToLocal(&script)) {
+            return; // Compilation error already thrown
+          }
+
+          v8::Local<v8::Value> result;
+          if (!script->Run(context).ToLocal(&result)) {
+            return; // Runtime error already thrown
+          }
+
+          args.GetReturnValue().Set(result);
+        }).ToLocalChecked()
+    ).ToChecked();
+
     printf("=== V8 Heap Profiler Example ===\n");
 
-    // Get heap profiler
-    v8::HeapProfiler* profiler = isolate->GetHeapProfiler();
+    // // Get heap profiler
+    // v8::HeapProfiler* profiler = isolate->GetHeapProfiler();
 
-    printf("Starting allocation sampling...\n");
-    // Start allocation sampling (sample every 1KB with stack depth of 16)
-    profiler->StartSamplingHeapProfiler(1024, 16);
+    // printf("Starting allocation sampling...\n");
+    // // Start allocation sampling (sample every 1KB with stack depth of 16)
+    // profiler->StartSamplingHeapProfiler(1024, 16);
 
     // Read JavaScript code from file
     std::string js_code = ReadFile(argv[1]);
@@ -169,11 +215,11 @@ int main(int argc, char* argv[]) {
 
     printf("Stopping allocation sampling...\n");
 
-    // Get allocation profile
-    v8::AllocationProfile* profile = profiler->GetAllocationProfile();
+    // // Get allocation profile
+    // v8::AllocationProfile* profile = profiler->GetAllocationProfile();
 
-    // Stop sampling
-    profiler->StopSamplingHeapProfiler();
+    // // Stop sampling
+    // profiler->StopSamplingHeapProfiler();
 
     // Print profile results
     // PrintAllocationProfile(profile);
@@ -199,7 +245,7 @@ int main(int argc, char* argv[]) {
     // }
 
     // Clean up the profile
-    delete profile;
+    //delete profile;
   }
 
   // Dispose the isolate and tear down V8.
