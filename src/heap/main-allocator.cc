@@ -201,7 +201,7 @@ AllocationResult MainAllocator::AllocateRawSlow(int size_in_bytes,
                 v8_flags.allow_allocation_in_fast_api_call ||
                     !isolate_heap()->isolate()->InFastCCall());
 
-  PrintF("AllocateRawSlow called\n");
+  // PrintF("AllocateRawSlow called\n");
 
   AllocationResult result =
       alignment != kTaggedAligned
@@ -222,7 +222,7 @@ AllocationResult MainAllocator::AllocateRawSlowUnaligned(
   InvokeAllocationObservers(result.ToAddress(), size_in_bytes, size_in_bytes,
                             size_in_bytes);
 
-  PrintF("Space start: %p top: %p\n", reinterpret_cast<void*>(allocation_info_->start()), reinterpret_cast<void*>(allocation_info_->top()));
+  // PrintF("Space start: %p top: %p\n", reinterpret_cast<void*>(allocation_info_->start()), reinterpret_cast<void*>(allocation_info_->top()));
 
   return result;
 }
@@ -527,8 +527,8 @@ void SemiSpaceNewSpaceAllocatorPolicy::
   Address current_top = allocator_->top();
   Address current_limit = allocator_->limit();
 
-  PrintF("Space start: %p top: %p\n", reinterpret_cast<void*>(allocator_->start()), reinterpret_cast<void*>(allocator_->top()));
-  PrintF("Debug Fast Counter: Counting allocation in %s (SemiSpaceNewSpaceAllocatorPolicy LAA free): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
+  // PrintF("Space start: %p top: %p\n", reinterpret_cast<void*>(allocator_->start()), reinterpret_cast<void*>(allocator_->top()));
+  // PrintF("Debug Fast Counter: Counting allocation in %s (SemiSpaceNewSpaceAllocatorPolicy LAA free): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
   space_->CountTotalAllocatedBytes(allocator_->top() - allocator_->start());
   allocator_->AdvanceAllocationObservers();
   allocator_->ResetLab(kNullAddress, kNullAddress, kNullAddress);
@@ -546,7 +546,7 @@ PagedNewSpaceAllocatorPolicy::PagedNewSpaceAllocatorPolicy(
 bool PagedNewSpaceAllocatorPolicy::EnsureAllocation(
     int size_in_bytes, AllocationAlignment alignment, AllocationOrigin origin) {
   if (space_->paged_space()->last_lab_page_) {
-    PrintF("Debug: decreasing LAB size by %zu\n", allocator_->limit() - allocator_->top());
+    // PrintF("Debug: decreasing LAB size by %zu\n", allocator_->limit() - allocator_->top());
     space_->paged_space()->last_lab_page_->DecreaseAllocatedLabSize(
         allocator_->limit() - allocator_->top());
     allocator_->ExtendLAB(allocator_->top());
@@ -895,7 +895,7 @@ bool PagedSpaceAllocatorPolicy::TryExtendLAB(int size_in_bytes) {
   if (current_top + size_in_bytes > max_limit) {
     return false;
   }
-  PrintF("Debug Fast Counter: Counting allocation in %s (LAB extension): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
+  // PrintF("Debug Fast Counter: Counting allocation in %s (LAB extension): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
   space_->CountTotalAllocatedBytes(allocator_->top() - allocator_->start());
   allocator_->AdvanceAllocationObservers();
   Address new_limit =
@@ -933,7 +933,7 @@ void PagedSpaceAllocatorPolicy::FreeLinearAllocationAreaUnsynchronized() {
   DCHECK_IMPLIES(!allocator_->supports_extending_lab(),
                  current_max_limit == current_limit);
 
-  PrintF("Debug Fast Counter: Counting allocation in %s (LAA free): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
+  // PrintF("Debug Fast Counter: Counting allocation in %s (LAA free): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
   space_->CountTotalAllocatedBytes(allocator_->top() - allocator_->start());
   allocator_->AdvanceAllocationObservers();
 

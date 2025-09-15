@@ -3804,79 +3804,18 @@ DirectHandle<NativeContext> Isolate::GetIncumbentContextSlow() {
   return Utils::OpenDirectHandle(*entered_context);
 }
 
-size_t Isolate::GetTotalAllocatedBytesInSpace(Space* space) {
-  size_t total_bytes = space->GetTotalAllocatedBytes();
-
-  // Add LAB usage from all spaces that have Linear Allocation Buffers
-  // FIXME: Maybe the place to have it shouldn't be here.
-  HeapAllocator* allocator = heap()->allocator();
-
-  switch (space->identity()) {
-    case NEW_SPACE: {
-      const MainAllocator* new_allocator = allocator->new_space_allocator();
-      if (new_allocator->top() > new_allocator->start()) {
-        total_bytes += new_allocator->top() - new_allocator->start();
-      }
-      break;
-    }
-    case OLD_SPACE: {
-      const MainAllocator* old_allocator = allocator->old_space_allocator();
-      if (old_allocator->top() > old_allocator->start()) {
-        size_t size = old_allocator->top() - old_allocator->start();
-        total_bytes += size;
-      }
-      break;
-    }
-    case TRUSTED_SPACE: {
-      const MainAllocator* trusted_allocator = allocator->trusted_space_allocator();
-      if (trusted_allocator->top() > trusted_allocator->start()) {
-        total_bytes += trusted_allocator->top() - trusted_allocator->start();
-      }
-      break;
-    }
-    case CODE_SPACE: {
-      const MainAllocator* code_allocator = allocator->code_space_allocator();
-      if (code_allocator->top() > code_allocator->start()) {
-        total_bytes += code_allocator->top() - code_allocator->start();
-      }
-      break;
-    }
-    case SHARED_SPACE: {
-      const MainAllocator* shared_allocator = allocator->shared_space_allocator();
-      if (shared_allocator->top() > shared_allocator->start()) {
-        total_bytes += shared_allocator->top() - shared_allocator->start();
-      }
-      break;
-    }
-    case SHARED_TRUSTED_SPACE: {
-      const MainAllocator* trust_shared_allocator = allocator->shared_trusted_space_allocator();
-      if (trust_shared_allocator->top() > trust_shared_allocator->start()) {
-        total_bytes += trust_shared_allocator->top() - trust_shared_allocator->start();
-      }
-      break;
-    }
-    default:
-      break;
-  }
-
-  size_t total_allocated_bytes_in_gc = space->GetTotalAllocatedBytesInGC();
-  size_t total_allocated_bytes = total_bytes - total_allocated_bytes_in_gc;
-  PrintF("Space: %s, Allocated Bytes: %zu Total Allocated Bytes: %zu Total Bytes from GC: %zu\n", ToString(space->identity()), total_allocated_bytes, total_bytes, total_allocated_bytes_in_gc);
-  return total_allocated_bytes;
-}
-
 size_t Isolate::GetTotalAllocatedBytes() {
   size_t total_bytes = 0;
 
   for (SpaceIterator it(this->heap()); it.HasNext();) {
-    total_bytes += GetTotalAllocatedBytesInSpace(it.Next());
+    total_bytes += it.Next()->GetTotalAllocatedBytes();
   }
 
-  PrintF("Sum Total Allocated Bytes: %zu\n", total_bytes);
-  PrintF("Total Allocated Bytes from Observer: %zu\n",
-         total_allocated_bytes_from_observer());
+  // PrintF("Sum Total Allocated Bytes: %zu\n", total_bytes);
+  // PrintF("Total Allocated Bytes from Observer: %zu\n",
+  //        total_allocated_bytes_from_observer());
 
-  total_allocation_tracker_->PrintSpaceBreakdown();
+  // total_allocation_tracker_->PrintSpaceBreakdown();
 
   return total_bytes;
 }
@@ -5834,9 +5773,9 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
 
     // FIXME: this should not be here, and it should be behing a flag or any
     // other API mechanism to avoid counting overhead on every allocation.
-    total_allocation_tracker_ = std::make_unique<TotalAllocationTracker>(&heap_);
-    heap_.AddAllocationObserversToAllSpaces(total_allocation_tracker_.get(),
-                                           total_allocation_tracker_.get());
+    // total_allocation_tracker_ = std::make_unique<TotalAllocationTracker>(&heap_);
+    // heap_.AddAllocationObserversToAllSpaces(total_allocation_tracker_.get(),
+    //                                        total_allocation_tracker_.get());
   }
 
   DCHECK_EQ(this, Isolate::Current());

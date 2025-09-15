@@ -1181,7 +1181,6 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
         : 0;
   }
 
-  size_t GetTotalAllocatedBytesInSpace(Space* space);
   size_t GetTotalAllocatedBytes();
   static Isolate* FromHeap(const Heap* heap) {
     return reinterpret_cast<Isolate*>(reinterpret_cast<Address>(heap) -

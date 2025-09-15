@@ -37,7 +37,8 @@ static Tagged<HeapObject> AllocateUnaligned(OldLargeObjectSpace* allocator,
                                             OldLargeObjectSpace* space,
                                             int size) {
   AllocationResult allocation = allocator->AllocateRaw(
-      space->heap()->main_thread_local_heap(), size, AllocationHint());
+      space->heap()->main_thread_local_heap(), size, AllocationOrigin::kRuntime,
+      AllocationHint());
   CHECK(!allocation.IsFailure());
   Tagged<HeapObject> filler;
   CHECK(allocation.To(&filler));
