@@ -201,7 +201,7 @@ AllocationResult MainAllocator::AllocateRawSlow(int size_in_bytes,
                 v8_flags.allow_allocation_in_fast_api_call ||
                     !isolate_heap()->isolate()->InFastCCall());
 
-  // PrintF("AllocateRawSlow called\n");
+  PrintF("AllocateRawSlow called\n");
 
   AllocationResult result =
       alignment != kTaggedAligned
@@ -222,7 +222,7 @@ AllocationResult MainAllocator::AllocateRawSlowUnaligned(
   InvokeAllocationObservers(result.ToAddress(), size_in_bytes, size_in_bytes,
                             size_in_bytes);
 
-  // PrintF("Space start: %p top: %p\n", reinterpret_cast<void*>(allocation_info_->start()), reinterpret_cast<void*>(allocation_info_->top()));
+  PrintF("Space start: %p top: %p\n", reinterpret_cast<void*>(allocation_info_->start()), reinterpret_cast<void*>(allocation_info_->top()));
 
   return result;
 }
@@ -527,8 +527,8 @@ void SemiSpaceNewSpaceAllocatorPolicy::
   Address current_top = allocator_->top();
   Address current_limit = allocator_->limit();
 
-  // PrintF("Space start: %p top: %p\n", reinterpret_cast<void*>(allocator_->start()), reinterpret_cast<void*>(allocator_->top()));
-  // PrintF("Debug Fast Counter: Counting allocation in %s (SemiSpaceNewSpaceAllocatorPolicy LAA free): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
+  PrintF("Space start: %p top: %p\n", reinterpret_cast<void*>(allocator_->start()), reinterpret_cast<void*>(allocator_->top()));
+  PrintF("Debug Fast Counter: Counting allocation in %s (SemiSpaceNewSpaceAllocatorPolicy LAA free): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
   space_->CountTotalAllocatedBytes(allocator_->top() - allocator_->start());
   allocator_->AdvanceAllocationObservers();
   allocator_->ResetLab(kNullAddress, kNullAddress, kNullAddress);
@@ -933,7 +933,8 @@ void PagedSpaceAllocatorPolicy::FreeLinearAllocationAreaUnsynchronized() {
   DCHECK_IMPLIES(!allocator_->supports_extending_lab(),
                  current_max_limit == current_limit);
 
-  // PrintF("Debug Fast Counter: Counting allocation in %s (LAA free): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
+  PrintF("Space start: %p top: %p, space address: %p\n", reinterpret_cast<void*>(allocator_->start()), reinterpret_cast<void*>(allocator_->top()), space_);
+  PrintF("Debug Fast Counter: Counting allocation in %s (LAA free): %zu\n", ToString(space_->identity()), allocator_->top() - allocator_->start());
   space_->CountTotalAllocatedBytes(allocator_->top() - allocator_->start());
   allocator_->AdvanceAllocationObservers();
 

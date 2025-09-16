@@ -17702,8 +17702,9 @@ TEST(GetHeapSpaceStatistics) {
 }
 
 UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
-  i::v8_flags.expose_gc = true;
-  i::FlagList::EnforceFlagImplications();
+  // This test is incompatible with concurrent allocation, which may occur
+  // while collecting the statistics and break the final `CHECK_EQ`s.
+  if (i::v8_flags.stress_concurrent_allocation) return;
 
   v8::Isolate::CreateParams create_params;
   create_params.array_buffer_allocator = CcTest::array_buffer_allocator();
@@ -17722,36 +17723,47 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
       allocation_size * 2 + lo_allocation_size * 2 + trusted_allocation_size +
       trusted_lo_allocation_size;
 
-  size_t initial_allocated;
   {
     v8::Isolate::Scope isolate_scope(isolate);
     v8::HandleScope handle_scope(isolate);
     LocalContext env(isolate);
+    i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate);
 
     v8::HeapStatistics heap_stats_before;
     isolate->GetHeapStatistics(&heap_stats_before);
-    initial_allocated = heap_stats_before.total_allocated_bytes();
+    size_t initial_allocated = heap_stats_before.total_allocated_bytes();
 
-    i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate);
+    i::PrintF("Allocation Starting...\n");
 
     auto young_alloc = i_isolate->factory()->TryNewFixedArray(
         number_of_elements, i::AllocationType::kYoung);
     USE(young_alloc);
+    i::PrintF("Young Allocated...\n");
     auto old_alloc = i_isolate->factory()->TryNewFixedArray(
         number_of_elements,i::AllocationType::kOld);
     USE(old_alloc);
+    i::PrintF("Old Allocated...\n");
     auto trusted_alloc = i_isolate->factory()->NewTrustedFixedArray(
         number_of_elements, i::AllocationType::kTrusted);
     USE(trusted_alloc);
+    i::PrintF("Trusted Allocated...\n");
     auto old_lo_alloc = i_isolate->factory()->TryNewFixedArray(
         lo_number_of_elements, i::AllocationType::kOld);
     USE(old_lo_alloc);
-    auto young_lo_alloc = i_isolate->factory()->TryNewFixedArray(
+    i::PrintF("LO Old Allocated...\n");
+
+    {
+      v8::HandleScope inner_handle_scope(isolate);
+      auto young_lo_alloc = i_isolate->factory()->TryNewFixedArray(
         lo_number_of_elements, i::AllocationType::kYoung);
-    USE(young_lo_alloc);
+      USE(young_lo_alloc);
+      i::PrintF("LO Young Allocated...\n");
+    }
+
     auto trusted_lo_alloc = i_isolate->factory()->NewTrustedFixedArray(
         lo_number_of_elements, i::AllocationType::kTrusted);
     USE(trusted_lo_alloc);
+    i::PrintF("LO Trusted Allocated...\n");
 
     v8::HeapStatistics heap_stats_after;
     isolate->GetHeapStatistics(&heap_stats_after);
@@ -17759,31 +17771,27 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
 
     CHECK_GT(final_allocated, initial_allocated);
     size_t allocated_diff = final_allocated - initial_allocated;
+    i::PrintF("allocated_diff: %zu, expected_allocation_size: %d\n", allocated_diff, expected_allocation_size);
     CHECK_EQ(allocated_diff, expected_allocation_size);
-  }
 
-  {
-    v8::Isolate::Scope isolate_scope(isolate);
-    v8::HandleScope handle_scope(isolate);
-    LocalContext env(isolate);
-
-    v8::HeapStatistics heap_stats_before_gc;
-    isolate->GetHeapStatistics(&heap_stats_before_gc);
-    initial_allocated = heap_stats_before_gc.total_allocated_bytes();
-
-    isolate->RequestGarbageCollectionForTesting(v8::Isolate::kFullGarbageCollection);
+    // This either tests counting happening when a LAB freed and validade
+    // there's no double counting on evacuated/promoted objects.
+    v8::internal::heap::InvokeAtomicMajorGC(i_isolate->heap());
 
     v8::HeapStatistics heap_stats_after_gc;
     isolate->GetHeapStatistics(&heap_stats_after_gc);
-    size_t final_allocated = heap_stats_after_gc.total_allocated_bytes();
+    size_t total_allocation_after_gc = heap_stats_after_gc.total_allocated_bytes();
 
-    CHECK_EQ(final_allocated, initial_allocated);
+    CHECK_EQ(total_allocation_after_gc, final_allocated);
   }
 
   isolate->Dispose();
 }
 
 UNINITIALIZED_TEST(GetHeapTotalAllocatedBytesSharedSpaces) {
+  // This test is incompatible with concurrent allocation, which may occur
+  // while collecting the statistics and break the final `CHECK_EQ`s.
+  if (i::v8_flags.stress_concurrent_allocation) return;
   if (!V8_CAN_CREATE_SHARED_HEAP_BOOL) return;
   if (COMPRESS_POINTERS_IN_MULTIPLE_CAGES_BOOL) return;
 

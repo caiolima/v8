@@ -29,6 +29,8 @@ AllocationResult MainAllocator::AllocateRaw(int size_in_bytes,
                  v8_flags.allow_allocation_in_fast_api_call ||
                      !isolate_heap()->isolate()->InFastCCall());
 
+  PrintF("AllocateRaw called in space address: %p\n", space_);
+
   AllocationResult result;
 
   if (alignment != kTaggedAligned) [[unlikely]] {
@@ -37,8 +39,15 @@ AllocationResult MainAllocator::AllocateRaw(int size_in_bytes,
     result = AllocateFastUnaligned(size_in_bytes, origin);
   }
 
-  return result.IsFailure() ? AllocateRawSlow(size_in_bytes, alignment, origin)
-                            : result;
+  PrintF("AllocateRaw called with size: %d\n", size_in_bytes);
+
+  result = result.IsFailure()
+               ? AllocateRawSlow(size_in_bytes, alignment, origin)
+               : result;
+  if (result.IsFailure()) {
+    PrintF("Failed allocation\n");
+  }
+  return result;
 }
 
 AllocationResult MainAllocator::AllocateFastUnaligned(int size_in_bytes,

@@ -35,11 +35,14 @@ void HeapAllocator::Setup() {
       local_heap_->is_main_thread()) {
     LinearAllocationArea* const new_allocation_info =
         &heap_->isolate()->isolate_data()->new_allocation_info();
-    new_space_allocator_.emplace(
-        local_heap_,
+    SpaceWithLinearArea* space =
         v8_flags.sticky_mark_bits
             ? static_cast<SpaceWithLinearArea*>(heap_->sticky_space())
-            : static_cast<SpaceWithLinearArea*>(heap_->new_space()),
+            : static_cast<SpaceWithLinearArea*>(heap_->new_space());
+    PrintF("New Heap Allocator Space address: %p\n", space);
+    new_space_allocator_.emplace(
+        local_heap_,
+        space,
         MainAllocator::IsNewGeneration::kYes, new_allocation_info);
   }
 

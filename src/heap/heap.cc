@@ -6112,6 +6112,7 @@ void Heap::SetUpSpaces() {
   if (!v8_flags.single_generation) {
     if (!v8_flags.sticky_mark_bits) {
       if (v8_flags.minor_ms) {
+        PrintF("Creating new PagedSpace\n");
         space_[NEW_SPACE] = std::make_unique<PagedNewSpace>(
             this, initial_semispace_size_, min_semi_space_size_,
             max_semi_space_size_);
@@ -6120,6 +6121,7 @@ void Heap::SetUpSpaces() {
             this, initial_semispace_size_, min_semi_space_size_,
             max_semi_space_size_);
       }
+      PrintF("New Space address: %p\n", space_[NEW_SPACE].get());
       new_space_ = static_cast<NewSpace*>(space_[NEW_SPACE].get());
     }
 

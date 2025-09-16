@@ -70,9 +70,11 @@ size_t Space::GetTotalAllocatedBytes() {
   // Here we check spaces that might have allocations in their current
   // LinearAllocationArea that hasn't been freed yet. It means that they aren't
   // counted on total_allocated_bytes yet.
+  PrintF("Space Address: %p\n", this);
   switch (identity()) {
     case NEW_SPACE: {
       const MainAllocator* new_allocator = allocator->new_space_allocator();
+      PrintF("LAA start: %p, LAA top: %p, Space Address: %p\n", reinterpret_cast<void*>(new_allocator->start()), reinterpret_cast<void*>(new_allocator->top()), this);
       if (new_allocator->top() > new_allocator->start()) {
         total_bytes += new_allocator->top() - new_allocator->start();
       }
@@ -118,6 +120,7 @@ size_t Space::GetTotalAllocatedBytes() {
       break;
   }
 
+  PrintF("Space: %s, Total Bytes: %zu, Total Bytes in GC: %zu\n", ToString(identity()), total_bytes, total_allocated_bytes_in_gc);
   return total_bytes - total_allocated_bytes_in_gc;
 }
 

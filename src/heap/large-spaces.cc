@@ -111,7 +111,9 @@ AllocationResult OldLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
                                                   Executability executable,
                                                   AllocationOrigin origin,
                                                   AllocationHint hint) {
+  PrintF("OldLargeObjectSpace::AllocateRaw called with size: %u\n", object_size);
   object_size = ALIGN_TO_ALLOCATION_ALIGNMENT(object_size);
+  PrintF("Aligned size: %u\n", object_size);
   DCHECK_IMPLIES(identity() == SHARED_LO_SPACE,
                  !allocation_counter_.HasAllocationObservers());
   DCHECK_IMPLIES(identity() == SHARED_LO_SPACE,
@@ -386,7 +388,9 @@ AllocationResult NewLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
                                                   int object_size,
                                                   AllocationOrigin origin,
                                                   AllocationHint hint) {
+  PrintF("NewLargeObjectSpace::AllocateRaw called with size: %u\n", object_size);
   object_size = ALIGN_TO_ALLOCATION_ALIGNMENT(object_size);
+  PrintF("Size aligned: %u\n", object_size);
   DCHECK(local_heap->is_main_thread());
   // Do not allocate more objects if promoting the existing object would exceed
   // the old generation capacity.
