@@ -3804,8 +3804,8 @@ DirectHandle<NativeContext> Isolate::GetIncumbentContextSlow() {
   return Utils::OpenDirectHandle(*entered_context);
 }
 
-size_t Isolate::GetTotalAllocatedBytes() {
-  size_t total_bytes = 0;
+uint64_t Isolate::GetTotalAllocatedBytes() {
+  uint64_t total_bytes = 0;
   for (SpaceIterator it(this->heap()); it.HasNext();) {
     total_bytes += it.Next()->GetTotalAllocatedBytes();
   }

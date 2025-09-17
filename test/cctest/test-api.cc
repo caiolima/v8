@@ -36,7 +36,6 @@
 #include <string>
 
 #include "test/cctest/cctest.h"
-#include "src/utils/utils.h"
 
 #if V8_OS_POSIX
 #include <unistd.h>
@@ -17710,16 +17709,16 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
   create_params.array_buffer_allocator = CcTest::array_buffer_allocator();
   v8::Isolate* isolate = v8::Isolate::New(create_params);
 
-  const int number_of_elements = 1;
-  const int allocation_size = i::FixedArray::SizeFor(number_of_elements);
-  const int trusted_allocation_size = i::TrustedFixedArray::SizeFor(
+  const uint number_of_elements = 1;
+  const uint allocation_size = i::FixedArray::SizeFor(number_of_elements);
+  const uint trusted_allocation_size = i::TrustedFixedArray::SizeFor(
       number_of_elements);
-  const int lo_number_of_elements = 256 * 1024;
-  const int lo_allocation_size = i::FixedArray::SizeFor(
+  const uint lo_number_of_elements = 256 * 1024;
+  const uint lo_allocation_size = i::FixedArray::SizeFor(
       lo_number_of_elements);
-  const int trusted_lo_allocation_size =
+  const uint trusted_lo_allocation_size =
       i::TrustedFixedArray::SizeFor(lo_number_of_elements);
-  const int expected_allocation_size =
+  const uint expected_allocation_size =
       allocation_size * 2 + lo_allocation_size * 2 + trusted_allocation_size +
       trusted_lo_allocation_size;
 
@@ -17759,10 +17758,10 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
 
     v8::HeapStatistics heap_stats_after;
     isolate->GetHeapStatistics(&heap_stats_after);
-    size_t final_allocated = heap_stats_after.total_allocated_bytes();
+    uint64_t final_allocated = heap_stats_after.total_allocated_bytes();
 
     CHECK_GT(final_allocated, initial_allocated);
-    size_t allocated_diff = final_allocated - initial_allocated;
+    uint64_t allocated_diff = final_allocated - initial_allocated;
     CHECK_EQ(allocated_diff, expected_allocation_size);
 
     // This either tests counting happening when a LAB freed and validade
@@ -17771,7 +17770,8 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
 
     v8::HeapStatistics heap_stats_after_gc;
     isolate->GetHeapStatistics(&heap_stats_after_gc);
-    size_t total_allocation_after_gc = heap_stats_after_gc.total_allocated_bytes();
+    uint64_t total_allocation_after_gc =
+        heap_stats_after_gc.total_allocated_bytes();
 
     CHECK_EQ(total_allocation_after_gc, final_allocated);
   }
@@ -17804,15 +17804,19 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytesSharedSpaces) {
 
     i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate);
 
-    const int number_of_elements = 1;
-    const int allocation_size = i::FixedArray::SizeFor(number_of_elements);
-    const int trusted_allocation_size = i::TrustedFixedArray::SizeFor(
+    const uint number_of_elements = 1;
+    const uint allocation_size = i::FixedArray::SizeFor(number_of_elements);
+    const uint trusted_allocation_size = i::TrustedFixedArray::SizeFor(
         number_of_elements);
-    const int lo_number_of_elements = 256 * 1024;
-    const int lo_allocation_size =
+    const uint lo_number_of_elements = 256 * 1024;
+    const uint lo_allocation_size =
         i::FixedArray::SizeFor(lo_number_of_elements);
-    const int trusted_lo_allocation_size = i::FixedArray::SizeFor(
+    const uint trusted_lo_allocation_size = i::FixedArray::SizeFor(
         lo_number_of_elements);
+    const uint expected_allocation_size = allocation_size +
+                                         trusted_allocation_size +
+                                         lo_allocation_size +
+                                         trusted_lo_allocation_size;
 
     auto shared_alloc = i_isolate->factory()->NewTrustedFixedArray(
         number_of_elements, i::AllocationType::kSharedOld);
@@ -17829,13 +17833,11 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytesSharedSpaces) {
 
     v8::HeapStatistics heap_stats_after;
     isolate->GetHeapStatistics(&heap_stats_after);
-    size_t final_allocated = heap_stats_after.total_allocated_bytes();
+    uint64_t final_allocated = heap_stats_after.total_allocated_bytes();
 
     CHECK_GT(final_allocated, initial_allocated);
-    size_t allocated_diff = final_allocated - initial_allocated;
-    CHECK_EQ(allocated_diff, allocation_size + trusted_allocation_size +
-                                 lo_allocation_size +
-                                 trusted_lo_allocation_size);
+    uint64_t allocated_diff = final_allocated - initial_allocated;
+    CHECK_EQ(allocated_diff, expected_allocation_size);
   }
 
   isolate->Dispose();

@@ -1175,7 +1175,7 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   const Heap* heap() const { return &heap_; }
   ReadOnlyHeap* read_only_heap() const { return read_only_heap_; }
 
-  size_t GetTotalAllocatedBytes();
+  uint64_t GetTotalAllocatedBytes();
 
   static Isolate* FromHeap(const Heap* heap) {
     return reinterpret_cast<Isolate*>(reinterpret_cast<Address>(heap) -
