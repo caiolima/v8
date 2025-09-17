@@ -121,7 +121,6 @@ HeapAllocator::AllocateRaw(int size_in_bytes, AllocationOrigin origin,
   } else {
     switch (type) {
       case AllocationType::kYoung:
-        PrintF("Calling new_pace_allocator->AllocateRaw\n");
         allocation = new_space_allocator_->AllocateRaw(size_in_bytes, alignment,
                                                        origin, hint);
         break;

@@ -3806,17 +3806,9 @@ DirectHandle<NativeContext> Isolate::GetIncumbentContextSlow() {
 
 size_t Isolate::GetTotalAllocatedBytes() {
   size_t total_bytes = 0;
-
   for (SpaceIterator it(this->heap()); it.HasNext();) {
     total_bytes += it.Next()->GetTotalAllocatedBytes();
   }
-
-  // PrintF("Sum Total Allocated Bytes: %zu\n", total_bytes);
-  // PrintF("Total Allocated Bytes from Observer: %zu\n",
-  //        total_allocated_bytes_from_observer());
-
-  // total_allocation_tracker_->PrintSpaceBreakdown();
-
   return total_bytes;
 }
 
@@ -5770,12 +5762,6 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
     isolate_group()->SetupReadOnlyHeap(this, read_only_snapshot_data,
                                        can_rehash);
     heap_.SetUpSpaces();
-
-    // FIXME: this should not be here, and it should be behing a flag or any
-    // other API mechanism to avoid counting overhead on every allocation.
-    // total_allocation_tracker_ = std::make_unique<TotalAllocationTracker>(&heap_);
-    // heap_.AddAllocationObserversToAllSpaces(total_allocation_tracker_.get(),
-    //                                        total_allocation_tracker_.get());
   }
 
   DCHECK_EQ(this, Isolate::Current());

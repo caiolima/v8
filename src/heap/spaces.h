@@ -95,7 +95,7 @@ class V8_EXPORT_PRIVATE Space : public BaseSpace {
   void CountTotalAllocatedBytesInGC(size_t size_in_bytes) {
     total_allocated_bytes_in_gc += size_in_bytes;
   }
-  virtual size_t GetTotalAllocatedBytes();
+  virtual size_t GetTotalAllocatedBytes() const;
   size_t GetTotalAllocatedBytesInGC() { return total_allocated_bytes_in_gc; }
 
   // Returns amount of off-heap memory in-use by objects in this Space.

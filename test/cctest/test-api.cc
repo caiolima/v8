@@ -17733,37 +17733,29 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
     isolate->GetHeapStatistics(&heap_stats_before);
     size_t initial_allocated = heap_stats_before.total_allocated_bytes();
 
-    i::PrintF("Allocation Starting...\n");
-
     auto young_alloc = i_isolate->factory()->TryNewFixedArray(
         number_of_elements, i::AllocationType::kYoung);
     USE(young_alloc);
-    i::PrintF("Young Allocated...\n");
     auto old_alloc = i_isolate->factory()->TryNewFixedArray(
         number_of_elements,i::AllocationType::kOld);
     USE(old_alloc);
-    i::PrintF("Old Allocated...\n");
     auto trusted_alloc = i_isolate->factory()->NewTrustedFixedArray(
         number_of_elements, i::AllocationType::kTrusted);
     USE(trusted_alloc);
-    i::PrintF("Trusted Allocated...\n");
     auto old_lo_alloc = i_isolate->factory()->TryNewFixedArray(
         lo_number_of_elements, i::AllocationType::kOld);
     USE(old_lo_alloc);
-    i::PrintF("LO Old Allocated...\n");
 
     {
       v8::HandleScope inner_handle_scope(isolate);
       auto young_lo_alloc = i_isolate->factory()->TryNewFixedArray(
         lo_number_of_elements, i::AllocationType::kYoung);
       USE(young_lo_alloc);
-      i::PrintF("LO Young Allocated...\n");
     }
 
     auto trusted_lo_alloc = i_isolate->factory()->NewTrustedFixedArray(
         lo_number_of_elements, i::AllocationType::kTrusted);
     USE(trusted_lo_alloc);
-    i::PrintF("LO Trusted Allocated...\n");
 
     v8::HeapStatistics heap_stats_after;
     isolate->GetHeapStatistics(&heap_stats_after);
@@ -17771,7 +17763,6 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
 
     CHECK_GT(final_allocated, initial_allocated);
     size_t allocated_diff = final_allocated - initial_allocated;
-    i::PrintF("allocated_diff: %zu, expected_allocation_size: %d\n", allocated_diff, expected_allocation_size);
     CHECK_EQ(allocated_diff, expected_allocation_size);
 
     // This either tests counting happening when a LAB freed and validade
