@@ -9,6 +9,7 @@
 #include "src/objects/js-objects.h"
 #include "src/objects/objects.h"
 #include "src/objects/struct.h"
+#include "torque-generated/bit-fields.h"
 
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
@@ -79,7 +80,7 @@ class Module : public TorqueGeneratedModule<Module, HeapObject> {
   // Get the namespace object for [module].  If it doesn't exist yet, it is
   // created.
   static DirectHandle<JSModuleNamespace> GetModuleNamespace(
-      Isolate* isolate, Handle<Module> module);
+      Isolate* isolate, Handle<Module> module, ModuleImportPhase phase = ModuleImportPhase::kEvaluation);
 
   using BodyDescriptor =
       FixedBodyDescriptor<kExportsOffset, kHeaderSize, kHeaderSize>;
@@ -146,10 +147,16 @@ class JSModuleNamespace
   static V8_WARN_UNUSED_RESULT Maybe<PropertyAttributes> GetPropertyAttributes(
       LookupIterator* it);
 
+  static bool EvaluateDeferredModule(
+      Isolate *isolate, DirectHandle<JSModuleNamespace> holder);
+
   static V8_WARN_UNUSED_RESULT Maybe<bool> DefineOwnProperty(
       Isolate* isolate, DirectHandle<JSModuleNamespace> o,
       DirectHandle<Object> key, PropertyDescriptor* desc,
       Maybe<ShouldThrow> should_throw);
+
+  // Boolean accessors for flags
+  DECL_BOOLEAN_ACCESSORS(deferred_evaluation)
 
   // In-object fields.
   enum {
@@ -163,6 +170,9 @@ class JSModuleNamespace
       kHeaderSize + (kTaggedSize * kInObjectFieldCount);
 
   TQ_OBJECT_CONSTRUCTORS(JSModuleNamespace)
+ private:
+  // Bits for flags.
+  DEFINE_TORQUE_GENERATED_JS_MODULE_NAMESPACE_FLAGS()
 };
 
 class ScriptOrModule

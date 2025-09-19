@@ -35,6 +35,9 @@ ACCESSORS(SourceTextModule, async_parent_modules, Tagged<ArrayList>,
 
 BIT_FIELD_ACCESSORS(ModuleRequest, flags, position, ModuleRequest::PositionBits)
 
+BOOL_ACCESSORS(JSModuleNamespace, flags, deferred_evaluation,
+               DeferredEvaluationBit::kShift)
+
 inline void ModuleRequest::set_phase(ModuleImportPhase phase) {
   DCHECK(PhaseBits::is_valid(phase));
   int hints = flags();

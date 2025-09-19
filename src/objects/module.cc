@@ -317,7 +317,7 @@ MaybeDirectHandle<Object> Module::Evaluate(Isolate* isolate,
 }
 
 DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
-    Isolate* isolate, Handle<Module> module) {
+    Isolate* isolate, Handle<Module> module, ModuleImportPhase phase) {
   DirectHandle<HeapObject> object(module->module_namespace(), isolate);
   ReadOnlyRoots roots(isolate);
   if (!IsUndefined(*object, roots)) {
@@ -356,6 +356,7 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
       isolate->factory()->NewJSModuleNamespace();
   ns->set_module(*module);
   module->set_module_namespace(*ns);
+  ns->set_deferred_evaluation(phase == ModuleImportPhase::kDefer);
 
   // Create the properties in the namespace object. Transition the object
   // to dictionary mode so that property addition is faster.
@@ -440,6 +441,37 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
   }
 
   return Just(it->property_attributes());
+}
+
+bool JSModuleNamespace::EvaluateDeferredModule(
+    Isolate* isolate, DirectHandle<JSModuleNamespace> holder) {
+  Tagged<Module> module = holder->module();
+
+  Zone zone(isolate->allocator(), ZONE_NAME);
+  UnorderedModuleSet seenModules(&zone);
+
+  if (module->status() == Module::kLinked &&
+      !SourceTextModule::AnyDependencyNeedsAsyncEvaluation(
+          isolate, handle(module, isolate), &seenModules)) {
+
+    MaybeDirectHandle<Object> maybe_result =
+        Module::Evaluate(isolate, handle(module, isolate));
+    DirectHandle<Object> result;
+    if (!maybe_result.ToHandle(&result)) {
+      return false;
+    }
+
+    // Check if the result is a rejected promise
+    if (IsJSPromise(*result)) {
+      DirectHandle<JSPromise> promise = Cast<JSPromise>(result);
+      if (promise->status() == Promise::kRejected) {
+        return false;
+      }
+      CHECK_EQ(promise->status(), Promise::kFulfilled);
+    }
+  }
+
+  return true;
 }
 
 // ES

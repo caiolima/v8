@@ -244,27 +244,27 @@ void Accessors::ModuleNamespaceEntryGetter(
     v8::Local<v8::Name> name, const v8::PropertyCallbackInfo<v8::Value>& info) {
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
   HandleScope scope(isolate);
-  Tagged<JSModuleNamespace> holder =
-      Cast<JSModuleNamespace>(*Utils::OpenDirectHandle(*info.Holder()));
-  Tagged<Module> module = holder->module();
+  DirectHandle<JSModuleNamespace> holder =
+      Cast<JSModuleNamespace>(Utils::OpenDirectHandle(*info.Holder()));
+  // Tagged<Module> module = holder->module();
 
-  if (module->status() == Module::kLinked) {
-    MaybeDirectHandle<Object> maybe_result =
-        Module::Evaluate(isolate, handle(module, isolate));
-    DirectHandle<Object> result;
-    if (!maybe_result.ToHandle(&result)) {
-      return;
-    }
+  // if (module->status() == Module::kLinked) {
+  //   MaybeDirectHandle<Object> maybe_result =
+  //       Module::Evaluate(isolate, handle(module, isolate));
+  //   DirectHandle<Object> result;
+  //   if (!maybe_result.ToHandle(&result)) {
+  //     return;
+  //   }
 
-    // Check if the result is a rejected promise
-    if (IsJSPromise(*result)) {
-      DirectHandle<JSPromise> promise = Cast<JSPromise>(result);
-      if (promise->status() == Promise::kRejected) {
-        return;
-      }
-      CHECK_EQ(promise->status(), Promise::kFulfilled);
-    }
-  }
+  //   // Check if the result is a rejected promise
+  //   if (IsJSPromise(*result)) {
+  //     DirectHandle<JSPromise> promise = Cast<JSPromise>(result);
+  //     if (promise->status() == Promise::kRejected) {
+  //       return;
+  //     }
+  //     CHECK_EQ(promise->status(), Promise::kFulfilled);
+  //   }
+  // }
 
   DirectHandle<Object> result;
   if (holder->GetExport(isolate, Cast<String>(Utils::OpenDirectHandle(*name)))
