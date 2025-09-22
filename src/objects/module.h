@@ -147,7 +147,7 @@ class JSModuleNamespace
   static V8_WARN_UNUSED_RESULT Maybe<PropertyAttributes> GetPropertyAttributes(
       LookupIterator* it);
 
-  static bool EvaluateDeferredModule(
+  static void EvaluateDeferredModule(
       Isolate *isolate, DirectHandle<JSModuleNamespace> holder);
 
   static V8_WARN_UNUSED_RESULT Maybe<bool> DefineOwnProperty(

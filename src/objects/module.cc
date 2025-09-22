@@ -291,6 +291,7 @@ MaybeDirectHandle<Object> Module::Evaluate(Isolate* isolate,
   // Start of Evaluate () Concrete Method
   // 2. Assert: module.[[Status]] is one of LINKED, EVALUATING-ASYNC, or
   //    EVALUATED.
+  PrintF("Module Status: %d\n", module_status);
   CHECK(module_status == kLinked || module_status == kEvaluatingAsync ||
         module_status == kEvaluated);
 
@@ -443,35 +444,35 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
   return Just(it->property_attributes());
 }
 
-bool JSModuleNamespace::EvaluateDeferredModule(
+void JSModuleNamespace::EvaluateDeferredModule(
     Isolate* isolate, DirectHandle<JSModuleNamespace> holder) {
   Tagged<Module> module = holder->module();
 
   Zone zone(isolate->allocator(), ZONE_NAME);
   UnorderedModuleSet seenModules(&zone);
-
-  if (module->status() == Module::kLinked &&
-      !SourceTextModule::AnyDependencyNeedsAsyncEvaluation(
+  if (SourceTextModule::AnyDependencyNeedsAsyncEvaluation(
           isolate, handle(module, isolate), &seenModules)) {
-
-    MaybeDirectHandle<Object> maybe_result =
-        Module::Evaluate(isolate, handle(module, isolate));
-    DirectHandle<Object> result;
-    if (!maybe_result.ToHandle(&result)) {
-      return false;
-    }
-
-    // Check if the result is a rejected promise
-    if (IsJSPromise(*result)) {
-      DirectHandle<JSPromise> promise = Cast<JSPromise>(result);
-      if (promise->status() == Promise::kRejected) {
-        return false;
-      }
-      CHECK_EQ(promise->status(), Promise::kFulfilled);
-    }
+    isolate->Throw(*isolate->factory()->NewTypeError(
+        MessageTemplate::kNonEvaluatedDependency));
+    return;
   }
 
-  return true;
+  MaybeDirectHandle<Object> maybe_result =
+      Module::Evaluate(isolate, handle(module, isolate));
+  DirectHandle<Object> result;
+  if (!maybe_result.ToHandle(&result)) {
+    return;
+  }
+
+  // Check if the result is a rejected promise
+  if (IsJSPromise(*result)) {
+    DirectHandle<JSPromise> promise = Cast<JSPromise>(result);
+    if (promise->status() == Promise::kRejected) {
+      isolate->Throw(promise->result());
+      return;
+    }
+    CHECK_EQ(promise->status(), Promise::kFulfilled);
+  }
 }
 
 // ES
