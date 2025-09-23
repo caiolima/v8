@@ -1468,6 +1468,11 @@ bool SourceTextModule::AnyDependencyNeedsAsyncEvaluation(
     return false;
   }
 
+  if (source_text_module->status() == kEvaluating ||
+      source_text_module->status() == kEvaluatingAsync) {
+    return true;
+  }
+
   if (source_text_module->has_toplevel_await()) {
     return true;
   }

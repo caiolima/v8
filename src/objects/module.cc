@@ -291,7 +291,6 @@ MaybeDirectHandle<Object> Module::Evaluate(Isolate* isolate,
   // Start of Evaluate () Concrete Method
   // 2. Assert: module.[[Status]] is one of LINKED, EVALUATING-ASYNC, or
   //    EVALUATED.
-  PrintF("Module Status: %d\n", module_status);
   CHECK(module_status == kLinked || module_status == kEvaluatingAsync ||
         module_status == kEvaluated);
 
@@ -322,6 +321,7 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   DirectHandle<HeapObject> object(module->module_namespace(), isolate);
   ReadOnlyRoots roots(isolate);
   if (!IsUndefined(*object, roots)) {
+    PrintF("Namespace already created. Asking for phase: %d\n", phase);
     // Namespace object already exists.
     return Cast<JSModuleNamespace>(object);
   }
@@ -358,6 +358,8 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   ns->set_module(*module);
   module->set_module_namespace(*ns);
   ns->set_deferred_evaluation(phase == ModuleImportPhase::kDefer);
+
+  PrintF("This got created a Modules Namespace with Phase:%d\n", phase);
 
   // Create the properties in the namespace object. Transition the object
   // to dictionary mode so that property addition is faster.
@@ -446,6 +448,7 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
 
 void JSModuleNamespace::EvaluateDeferredModule(
     Isolate* isolate, DirectHandle<JSModuleNamespace> holder) {
+  PrintF("Deferred execution.\n");
   Tagged<Module> module = holder->module();
 
   Zone zone(isolate->allocator(), ZONE_NAME);
