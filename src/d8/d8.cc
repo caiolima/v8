@@ -1773,11 +1773,24 @@ void Shell::DoHostImportModuleDynamically(void* data) {
             MaybeLocal<Value> maybe_result = root_module->Evaluate(realm);
             if (maybe_result.IsEmpty()) break;
             global_result_promise.Reset(
-              isolate, maybe_result.ToLocalChecked().As<Promise>());
-          }
+                isolate, maybe_result.ToLocalChecked().As<Promise>());
+            global_namespace_or_source.Reset(
+                isolate, root_module->GetModuleNamespace(phase));
 
-          global_namespace_or_source.Reset(isolate,
-                                           root_module->GetModuleNamespace());
+          } else {
+            DCHECK_EQ(phase, ModuleImportPhase::kDefer);
+            // TODO(caiolima): add the logic that will eargarlly resolve async
+            // dependencies.
+
+            Local<Value> module_namespace =
+                root_module->GetModuleNamespace(phase);
+            Local<Promise::Resolver> module_resolver =
+                Promise::Resolver::New(realm).ToLocalChecked();
+            module_resolver->Resolve(realm, module_namespace).ToChecked();
+
+            global_namespace_or_source.Reset(isolate, module_namespace);
+            global_result_promise.Reset(isolate, module_resolver->GetPromise());
+          }
         }
         break;
       }

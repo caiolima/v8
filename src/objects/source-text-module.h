@@ -90,6 +90,10 @@ class SourceTextModule
             DirectHandleVector<JSMessageObject>>
   GetStalledTopLevelAwaitMessages(Isolate* isolate);
 
+  static void GatherAsynchronousTransitiveDependencies(
+      Isolate* isolate, Handle<Module> module,
+      ZoneVector<Handle<Module>>* result, UnorderedModuleSet* seen);
+
   static bool ReadyForSyncExecution(Isolate* isolate, Handle<Module> module,
                                     UnorderedModuleSet* seen);
 
@@ -199,10 +203,6 @@ class SourceTextModule
   static V8_WARN_UNUSED_RESULT MaybeDirectHandle<Object> InnerModuleEvaluation(
       Isolate* isolate, Handle<SourceTextModule> module,
       ZoneForwardList<Handle<SourceTextModule>>* stack, unsigned* dfs_index);
-
-  static void GatherAsynchronousTransitiveDependencies(
-      Isolate* isolate, Handle<Module> module,
-      ZoneVector<Handle<Module>>* result, UnorderedModuleSet* seen);
 
   // Returns true if the evaluation exception was catchable by js, and false
   // for termination exceptions.
