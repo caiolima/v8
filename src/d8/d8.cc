@@ -1779,17 +1779,18 @@ void Shell::DoHostImportModuleDynamically(void* data) {
 
           } else {
             DCHECK_EQ(phase, ModuleImportPhase::kDefer);
-            // TODO(caiolima): add the logic that will eargarlly resolve async
-            // dependencies.
+            // FIXME(caiolima): it feeels quite wrong to have all those internal
+            // accesses here. Probably we should abstract this away to other
+            // place that can also be used by other hosts.
 
-            Local<Value> module_namespace =
-                root_module->GetModuleNamespace(phase);
-            Local<Promise::Resolver> module_resolver =
-                Promise::Resolver::New(realm).ToLocalChecked();
-            module_resolver->Resolve(realm, module_namespace).ToChecked();
-
-            global_namespace_or_source.Reset(isolate, module_namespace);
-            global_result_promise.Reset(isolate, module_resolver->GetPromise());
+            MaybeLocal<Value> maybe_result = root_module->DeferredEvaluate(realm);
+            if (maybe_result.IsEmpty()) break;
+            global_result_promise.Reset(
+                isolate, maybe_result.ToLocalChecked().As<Promise>());
+            // Note: DeferredEvaluate already calls GetModuleNamespace, so this would
+            // return what got created there.
+            global_namespace_or_source.Reset(
+                isolate, root_module->GetModuleNamespace(phase));
           }
         }
         break;

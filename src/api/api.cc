@@ -2306,6 +2306,93 @@ MaybeLocal<Value> Module::Evaluate(Local<Context> context) {
   return api_scope.EscapeMaybe(i::Module::Evaluate(i_isolate, self));
 }
 
+MaybeLocal<Value> Module::DeferredEvaluate(Local<Context> context) {
+  auto i_isolate = i::Isolate::Current();
+  TRACE_EVENT_CALL_STATS_SCOPED(i_isolate, "v8", "V8.Execute");
+  EnterV8Scope<InternalEscapableScope> api_scope{i_isolate, context,
+                                                 RCCId::kAPI_Module_Evaluate};
+
+  auto self = Utils::OpenHandle(this);
+
+  i::Zone zone(i_isolate->allocator(), ZONE_NAME);
+  i::ZoneVector<i::Handle<i::Module>> evaluation_list(&zone);
+  i::UnorderedModuleSet seen_modules(&zone);
+
+  if (i::IsSourceTextModule(*self)) {
+    i::SourceTextModule::GatherAsynchronousTransitiveDependencies(
+        i_isolate, self, &evaluation_list, &seen_modules);
+  }
+
+  // Step ii: If evaluationList is empty, then perform fulfilledClosure()
+  if (evaluation_list.empty()) {
+    Local<Value> module_namespace = this->GetModuleNamespace(ModuleImportPhase::kDefer);
+    Local<Promise::Resolver> module_resolver =
+        Promise::Resolver::New(context).ToLocalChecked();
+    module_resolver->Resolve(context, module_namespace).ToChecked();
+
+    return api_scope.Escape(module_resolver->GetPromise());
+  }
+
+  // Convert std::vector to FixedArray then JSArray for Promise.all
+  i::Handle<i::FixedArray> promises_fixed_array =
+      i_isolate->factory()->NewFixedArray(
+          static_cast<int>(evaluation_list.size()));
+
+  bool has_error = false;
+  // Step iv: For each Module Record dep, append dep.Evaluate() to promises
+  for (size_t i = 0; i < evaluation_list.size(); i++) {
+    i::Handle<i::Module> dep_module = evaluation_list[i];
+    Local<Module> v8_dep_module = Utils::ToLocal(dep_module);
+
+    MaybeLocal<Value> maybe_eval_result =
+        v8_dep_module->Evaluate(context);
+    if (maybe_eval_result.IsEmpty()) {
+      has_error = true;
+      break;
+    }
+
+    Local<Value> eval_result = maybe_eval_result.ToLocalChecked();
+    CHECK(eval_result->IsPromise());
+    i::Handle<i::JSPromise> promise_handle =
+        Utils::OpenHandle(*eval_result.As<Promise>());
+    promises_fixed_array->set(static_cast<int>(i), *promise_handle);
+  }
+
+  if (has_error) {
+    // NOTE(caiolima): check if this is the proper way to see falty
+    // module evaluation. I'm mostly following now the way ordinary
+    // dynamic improt works here.
+    return api_scope.EscapeMaybe(MaybeLocal<Value>());
+  }
+
+  // FIXME(caiolima): this is probably problematic if there's tempering in
+  // Array.prototype[@iterator]. Find the proper solution to fix it.
+  i::Handle<i::JSArray> promise_array =
+      i_isolate->factory()->NewJSArrayWithElements(
+          promises_fixed_array, i::ElementsKind::PACKED_ELEMENTS);
+
+
+  i::DirectHandle<i::NativeContext> native_context = i_isolate->native_context();
+  i::DirectHandle<i::JSFunction> promise_constructor = i::DirectHandle<i::JSFunction>(
+      native_context->promise_function(), i_isolate);
+
+  i::DirectHandle<i::Object> argv[] = {promise_array};
+  i::MaybeHandle<i::Object> maybe_promise_all_result = i::Execution::CallBuiltin(
+      i_isolate, i_isolate->promise_all(),
+      promise_constructor, base::VectorOf(argv));
+
+  i::Handle<i::Object> promise_all_result;
+  if (maybe_promise_all_result.ToHandle(&promise_all_result)) {
+    // Set the Promise.all result as the global result promise
+    i::DirectHandle<i::JSObject> promise_obj = i::Cast<i::JSObject>(promise_all_result);
+    Local<Promise> result_promise = Utils::PromiseToLocal(promise_obj);
+
+    return api_scope.Escape(result_promise);
+  }
+
+  return api_scope.EscapeMaybe(MaybeLocal<Value>());
+}
+
 Local<Module> Module::CreateSyntheticModule(
     Isolate* v8_isolate, Local<String> module_name,
     const MemorySpan<const Local<String>>& export_names,

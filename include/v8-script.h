@@ -261,6 +261,11 @@ class V8_EXPORT Module : public Data {
   V8_WARN_UNUSED_RESULT MaybeLocal<Value> Evaluate(Local<Context> context);
 
   /**
+   * TODO(caiolima): describe this method.
+   */
+  V8_WARN_UNUSED_RESULT MaybeLocal<Value> DeferredEvaluate(Local<Context> context);
+
+  /**
    * Returns the namespace object of this module.
    *
    * The module's status must be at least kInstantiated.

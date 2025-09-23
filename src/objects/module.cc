@@ -370,8 +370,6 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
 
   ns->set_deferred_evaluation(phase == ModuleImportPhase::kDefer);
 
-  PrintF("This got created a Modules Namespace with Phase:%d\n", phase);
-
   // Create the properties in the namespace object. Transition the object
   // to dictionary mode so that property addition is faster.
   PropertyAttributes attr = DONT_DELETE;
