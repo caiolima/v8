@@ -1453,28 +1453,28 @@ void SourceTextModule::GatherAsynchronousTransitiveDependencies(
   }
 }
 
-bool SourceTextModule::AnyDependencyNeedsAsyncEvaluation(
+bool SourceTextModule::ReadyForSyncExecution(
     Isolate* isolate, Handle<Module> module, UnorderedModuleSet* seen) {
   if (!seen->insert(module).second) {
-    return false;
+    return true;
   }
 
   if (!IsSourceTextModule(*module)) {
-    return false;
+    return true;
   }
 
   Handle<SourceTextModule> source_text_module = Cast<SourceTextModule>(module);
   if (source_text_module->status() == kEvaluated) {
-    return false;
+    return true;
   }
 
   if (source_text_module->status() == kEvaluating ||
       source_text_module->status() == kEvaluatingAsync) {
-    return true;
+    return false;
   }
 
   if (source_text_module->has_toplevel_await()) {
-    return true;
+    return false;
   }
 
   DirectHandle<FixedArray> module_requests(source_text_module->info()->module_requests(), isolate);
@@ -1486,11 +1486,11 @@ bool SourceTextModule::AnyDependencyNeedsAsyncEvaluation(
       continue;
     }
     Handle<Module> requested_module(Cast<Module>(requested_modules->get(i)), isolate);
-    if (AnyDependencyNeedsAsyncEvaluation(isolate, requested_module, seen)) {
-      return true;
+    if (!ReadyForSyncExecution(isolate, requested_module, seen)) {
+      return false;
     }
   }
-  return false;
+  return true;
 }
 
 void SourceTextModule::Reset(Isolate* isolate,

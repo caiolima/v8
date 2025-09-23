@@ -3419,6 +3419,8 @@ DirectHandle<JSModuleNamespace> Factory::NewJSModuleNamespace() {
           NewJSObjectType::kMaybeEmbedderFieldsAndApiWrapper)));
   FieldIndex index = FieldIndex::ForDescriptor(
       *map, InternalIndex(JSModuleNamespace::kToStringTagFieldIndex));
+  // TODO(caiolime): This should take in consideration the deferred Module
+  // namespace as well.
   module_namespace->FastPropertyAtPut(index, read_only_roots().Module_string(),
                                       SKIP_WRITE_BARRIER);
   return module_namespace;

@@ -453,7 +453,7 @@ void JSModuleNamespace::EvaluateDeferredModule(
 
   Zone zone(isolate->allocator(), ZONE_NAME);
   UnorderedModuleSet seenModules(&zone);
-  if (SourceTextModule::AnyDependencyNeedsAsyncEvaluation(
+  if (!SourceTextModule::ReadyForSyncExecution(
           isolate, handle(module, isolate), &seenModules)) {
     isolate->Throw(*isolate->factory()->NewTypeError(
         MessageTemplate::kNonEvaluatedDependency));

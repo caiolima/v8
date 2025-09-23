@@ -90,9 +90,9 @@ class SourceTextModule
             DirectHandleVector<JSMessageObject>>
   GetStalledTopLevelAwaitMessages(Isolate* isolate);
 
-  static bool AnyDependencyNeedsAsyncEvaluation(Isolate* isolate,
-                                                Handle<Module> module,
-                                                UnorderedModuleSet* seen);
+  static bool ReadyForSyncExecution(Isolate* isolate, Handle<Module> module,
+                                    UnorderedModuleSet* seen);
+
 
 
  private:

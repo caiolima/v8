@@ -947,7 +947,7 @@
 ####
 # import test262@e7a84b0a090ca86cc05f2e90116115c8c2a7c059
 [ALWAYS, {
-  'language/import/import-defer/evaluation-triggers/ignore-exported-then-defineOwnProperty': [SKIP],
+ 'language/import/import-defer/evaluation-triggers/ignore-exported-then-defineOwnProperty': [SKIP],
  'language/import/import-defer/evaluation-triggers/ignore-exported-then-delete': [SKIP],
  'language/import/import-defer/evaluation-triggers/ignore-exported-then-get': [SKIP],
  'language/import/import-defer/evaluation-triggers/ignore-exported-then-getOwnProperty': [SKIP],
