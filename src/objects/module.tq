@@ -10,6 +10,7 @@ extern class Module extends HeapObject {
   hash: Smi;
   status: Smi;
   module_namespace: JSModuleNamespace|Undefined;
+  deferred_module_namespace: JSModuleNamespace|Undefined;
   // The exception in the case {status} is kErrored.
   exception: Object;
   // The top level promise capability of this module. Will only be defined

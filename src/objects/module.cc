@@ -161,7 +161,8 @@ void Module::Reset(Isolate* isolate, DirectHandle<Module> module) {
   // The namespace object cannot exist, because it would have been created
   // by RunInitializationCode, which is called only after this module's SCC
   // succeeds instantiation.
-  DCHECK(!IsJSModuleNamespace(module->module_namespace()));
+  DCHECK(!IsJSModuleNamespace(module->module_namespace()) &&
+         !IsJSModuleNamespace(module->deferred_module_namespace()));
   const int export_count =
       IsSourceTextModule(*module)
           ? Cast<SourceTextModule>(*module)->regular_exports()->length()
@@ -318,10 +319,14 @@ MaybeDirectHandle<Object> Module::Evaluate(Isolate* isolate,
 
 DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
     Isolate* isolate, Handle<Module> module, ModuleImportPhase phase) {
-  DirectHandle<HeapObject> object(module->module_namespace(), isolate);
+  DCHECK(phase == ModuleImportPhase::kEvaluation ||
+         phase == ModuleImportPhase::kDefer);
+  Tagged<HeapObject> module_ns = phase == ModuleImportPhase::kDefer
+                                     ? module->deferred_module_namespace()
+                                     : module->module_namespace();
+  DirectHandle<HeapObject> object(module_ns, isolate);
   ReadOnlyRoots roots(isolate);
   if (!IsUndefined(*object, roots)) {
-    PrintF("Namespace already created. Asking for phase: %d\n", phase);
     // Namespace object already exists.
     return Cast<JSModuleNamespace>(object);
   }
@@ -356,7 +361,13 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   DirectHandle<JSModuleNamespace> ns =
       isolate->factory()->NewJSModuleNamespace();
   ns->set_module(*module);
-  module->set_module_namespace(*ns);
+  if (phase == ModuleImportPhase::kEvaluation) {
+    module->set_module_namespace(*ns);
+  } else {
+    DCHECK(phase == ModuleImportPhase::kDefer);
+    module->set_deferred_module_namespace(*ns);
+  }
+
   ns->set_deferred_evaluation(phase == ModuleImportPhase::kDefer);
 
   PrintF("This got created a Modules Namespace with Phase:%d\n", phase);
