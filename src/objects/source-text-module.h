@@ -93,8 +93,6 @@ class SourceTextModule
   static bool ReadyForSyncExecution(Isolate* isolate, Handle<Module> module,
                                     UnorderedModuleSet* seen);
 
-
-
  private:
   friend class Factory;
   friend class Module;
