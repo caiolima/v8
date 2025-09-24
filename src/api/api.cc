@@ -2365,20 +2365,17 @@ MaybeLocal<Value> Module::DeferredEvaluate(Local<Context> context) {
     return api_scope.EscapeMaybe(MaybeLocal<Value>());
   }
 
-  // FIXME(caiolima): this is probably problematic if there's tempering in
-  // Array.prototype[@iterator]. Find the proper solution to fix it.
-  i::Handle<i::JSArray> promise_array =
-      i_isolate->factory()->NewJSArrayWithElements(
-          promises_fixed_array, i::ElementsKind::PACKED_ELEMENTS);
-
-
+  // Use PromiseAllFixedArray builtin to avoid Array.prototype pollution
+  // This directly processes the FixedArray without any iteration protocol
   i::DirectHandle<i::NativeContext> native_context = i_isolate->native_context();
   i::DirectHandle<i::JSFunction> promise_constructor = i::DirectHandle<i::JSFunction>(
       native_context->promise_function(), i_isolate);
 
-  i::DirectHandle<i::Object> argv[] = {promise_array};
+  i::DirectHandle<i::Object> argv[] = {promises_fixed_array};
+  i::DirectHandle<i::JSFunction> promise_all_function =
+      i::direct_handle(native_context->promise_all_fixed_array(), i_isolate);
   i::MaybeHandle<i::Object> maybe_promise_all_result = i::Execution::CallBuiltin(
-      i_isolate, i_isolate->promise_all(),
+      i_isolate, promise_all_function,
       promise_constructor, base::VectorOf(argv));
 
   i::Handle<i::Object> promise_all_result;
