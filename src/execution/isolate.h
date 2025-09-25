@@ -1175,6 +1175,10 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   const Heap* heap() const { return &heap_; }
   ReadOnlyHeap* read_only_heap() const { return read_only_heap_; }
 
+  void CountTotalAllocatedBytes(size_t size_in_bytes) { total_allocated_bytes_ += size_in_bytes; }
+  // void CountTotalAllocatedBytesInGC(size_t size_in_bytes) {
+  //   total_allocated_bytes_in_gc += size_in_bytes;
+  // }
   uint64_t GetTotalAllocatedBytes();
 
   static Isolate* FromHeap(const Heap* heap) {
@@ -2539,6 +2543,7 @@ class V8_EXPORT_PRIVATE Isolate final : private HiddenFactory {
   IsolateGroup* isolate_group_;
   Heap heap_;
   ReadOnlyHeap* read_only_heap_ = nullptr;
+  uint64_t total_allocated_bytes_ = 0;
 
   // These are guaranteed empty when !OwnsStringTables().
   std::unique_ptr<StringTable> string_table_;

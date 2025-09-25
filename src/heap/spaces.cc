@@ -64,7 +64,7 @@ Space* SpaceIterator::Next() {
 }
 
 uint64_t Space::GetTotalAllocatedBytes() const {
-  uint64_t total_bytes = total_allocated_bytes;
+  uint64_t total_bytes = 0;
   HeapAllocator* allocator = heap_->allocator();
 
   // Here we check spaces that might have allocations in their current
@@ -104,7 +104,7 @@ uint64_t Space::GetTotalAllocatedBytes() const {
     total_bytes += space_allocator->top() - space_allocator->start();
   }
 
-  return total_bytes - total_allocated_bytes_in_gc;
+  return total_bytes;
 }
 
 }  // namespace internal

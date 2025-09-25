@@ -51,10 +51,6 @@ AllocationResult MainAllocator::AllocateFastUnaligned(int size_in_bytes,
   Tagged<HeapObject> obj =
       HeapObject::FromAddress(allocation_info().IncrementTop(size_in_bytes));
 
-  if (origin == AllocationOrigin::kGC) {
-    space_->CountTotalAllocatedBytesInGC(size_in_bytes);
-  }
-
   MSAN_ALLOCATED_UNINITIALIZED_MEMORY(obj.address(), size_in_bytes);
 
   DCHECK_IMPLIES(black_allocation_ == BlackAllocation::kAlwaysEnabled,
@@ -77,10 +73,6 @@ AllocationResult MainAllocator::AllocateFastAligned(
       allocation_info().IncrementTop(aligned_size_in_bytes));
   if (result_aligned_size_in_bytes)
     *result_aligned_size_in_bytes = aligned_size_in_bytes;
-
-  if (origin == AllocationOrigin::kGC) {
-    space_->CountTotalAllocatedBytesInGC(aligned_size_in_bytes);
-  }
 
   if (filler_size > 0) {
     obj = space_heap()->PrecedeWithFiller(obj, filler_size);

@@ -91,10 +91,10 @@ class V8_EXPORT_PRIVATE Space : public BaseSpace {
   inline void DecrementExternalBackingStoreBytes(ExternalBackingStoreType type,
                                                  size_t amount);
 
-  void CountTotalAllocatedBytes(size_t size_in_bytes) { total_allocated_bytes += size_in_bytes; }
-  void CountTotalAllocatedBytesInGC(size_t size_in_bytes) {
-    total_allocated_bytes_in_gc += size_in_bytes;
-  }
+  // void CountTotalAllocatedBytes(size_t size_in_bytes) { total_allocated_bytes += size_in_bytes; }
+  // void CountTotalAllocatedBytesInGC(size_t size_in_bytes) {
+  //   total_allocated_bytes_in_gc += size_in_bytes;
+  // }
   virtual uint64_t GetTotalAllocatedBytes() const;
 
   // Returns amount of off-heap memory in-use by objects in this Space.
@@ -144,8 +144,8 @@ class V8_EXPORT_PRIVATE Space : public BaseSpace {
   std::atomic<size_t> external_backing_store_bytes_[static_cast<int>(
       ExternalBackingStoreType::kNumValues)] = {0};
   std::unique_ptr<FreeList> free_list_;
-  uint64_t total_allocated_bytes = 0;
-  uint64_t total_allocated_bytes_in_gc = 0;
+  // uint64_t total_allocated_bytes = 0;
+  // uint64_t total_allocated_bytes_in_gc = 0;
 };
 
 static_assert(sizeof(std::atomic<intptr_t>) == kSystemPointerSize);
