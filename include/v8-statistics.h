@@ -156,7 +156,8 @@ class V8_EXPORT HeapStatistics {
 
   /**
    * Returns the total number of bytes allocated since the Isolate was created.
-   * This includes all heap objects allocated in any space (new, old, code, etc.).
+   * This includes all heap objects allocated in any space (new, old, code,
+   * etc.).
    */
   uint64_t total_allocated_bytes() { return total_allocated_bytes_; }
 

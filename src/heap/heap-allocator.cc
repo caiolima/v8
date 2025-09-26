@@ -87,15 +87,19 @@ AllocationResult HeapAllocator::AllocateRawLargeInternal(
   DCHECK_GT(size_in_bytes, heap_->MaxRegularHeapObjectSize(allocation));
   switch (allocation) {
     case AllocationType::kYoung:
-      return new_lo_space()->AllocateRaw(local_heap_, size_in_bytes, origin, hint);
+      return new_lo_space()->AllocateRaw(local_heap_, size_in_bytes, origin,
+                                         hint);
     case AllocationType::kOld:
       return lo_space()->AllocateRaw(local_heap_, size_in_bytes, origin, hint);
     case AllocationType::kCode:
-      return code_lo_space()->AllocateRaw(local_heap_, size_in_bytes, origin, hint);
+      return code_lo_space()->AllocateRaw(local_heap_, size_in_bytes, origin,
+                                          hint);
     case AllocationType::kSharedOld:
-      return shared_lo_space()->AllocateRaw(local_heap_, size_in_bytes, origin, hint);
+      return shared_lo_space()->AllocateRaw(local_heap_, size_in_bytes, origin,
+                                            hint);
     case AllocationType::kTrusted:
-      return trusted_lo_space()->AllocateRaw(local_heap_, size_in_bytes, origin, hint);
+      return trusted_lo_space()->AllocateRaw(local_heap_, size_in_bytes, origin,
+                                             hint);
     case AllocationType::kSharedTrusted:
       return shared_trusted_lo_space()->AllocateRaw(local_heap_, size_in_bytes,
                                                     origin, hint);

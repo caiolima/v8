@@ -37,9 +37,8 @@ AllocationResult MainAllocator::AllocateRaw(int size_in_bytes,
     result = AllocateFastUnaligned(size_in_bytes, origin);
   }
 
-  return result.IsFailure()
-               ? AllocateRawSlow(size_in_bytes, alignment, origin)
-               : result;
+  return result.IsFailure() ? AllocateRawSlow(size_in_bytes, alignment, origin)
+                            : result;
 }
 
 AllocationResult MainAllocator::AllocateFastUnaligned(int size_in_bytes,

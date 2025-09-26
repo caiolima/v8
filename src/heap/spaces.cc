@@ -89,7 +89,7 @@ uint64_t Space::GetTotalAllocatedBytesInLAA() const {
       break;
     }
     case SHARED_SPACE: {
-     space_allocator = allocator->shared_space_allocator();
+      space_allocator = allocator->shared_space_allocator();
       break;
     }
     case SHARED_TRUSTED_SPACE: {

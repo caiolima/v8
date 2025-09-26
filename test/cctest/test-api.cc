@@ -17711,11 +17711,10 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
 
   const uint number_of_elements = 1;
   const uint allocation_size = i::FixedArray::SizeFor(number_of_elements);
-  const uint trusted_allocation_size = i::TrustedFixedArray::SizeFor(
-      number_of_elements);
+  const uint trusted_allocation_size =
+      i::TrustedFixedArray::SizeFor(number_of_elements);
   const uint lo_number_of_elements = 256 * 1024;
-  const uint lo_allocation_size = i::FixedArray::SizeFor(
-      lo_number_of_elements);
+  const uint lo_allocation_size = i::FixedArray::SizeFor(lo_number_of_elements);
   const uint trusted_lo_allocation_size =
       i::TrustedFixedArray::SizeFor(lo_number_of_elements);
   const uint expected_allocation_size =
@@ -17736,7 +17735,7 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
         number_of_elements, i::AllocationType::kYoung);
     USE(young_alloc);
     auto old_alloc = i_isolate->factory()->TryNewFixedArray(
-        number_of_elements,i::AllocationType::kOld);
+        number_of_elements, i::AllocationType::kOld);
     USE(old_alloc);
     auto trusted_alloc = i_isolate->factory()->NewTrustedFixedArray(
         number_of_elements, i::AllocationType::kTrusted);
@@ -17748,7 +17747,7 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
     {
       v8::HandleScope inner_handle_scope(isolate);
       auto young_lo_alloc = i_isolate->factory()->TryNewFixedArray(
-        lo_number_of_elements, i::AllocationType::kYoung);
+          lo_number_of_elements, i::AllocationType::kYoung);
       USE(young_lo_alloc);
     }
 
@@ -17806,17 +17805,16 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytesSharedSpaces) {
 
     const uint number_of_elements = 1;
     const uint allocation_size = i::FixedArray::SizeFor(number_of_elements);
-    const uint trusted_allocation_size = i::TrustedFixedArray::SizeFor(
-        number_of_elements);
+    const uint trusted_allocation_size =
+        i::TrustedFixedArray::SizeFor(number_of_elements);
     const uint lo_number_of_elements = 256 * 1024;
     const uint lo_allocation_size =
         i::FixedArray::SizeFor(lo_number_of_elements);
-    const uint trusted_lo_allocation_size = i::FixedArray::SizeFor(
-        lo_number_of_elements);
-    const uint expected_allocation_size = allocation_size +
-                                         trusted_allocation_size +
-                                         lo_allocation_size +
-                                         trusted_lo_allocation_size;
+    const uint trusted_lo_allocation_size =
+        i::FixedArray::SizeFor(lo_number_of_elements);
+    const uint expected_allocation_size =
+        allocation_size + trusted_allocation_size + lo_allocation_size +
+        trusted_lo_allocation_size;
 
     auto shared_alloc = i_isolate->factory()->NewTrustedFixedArray(
         number_of_elements, i::AllocationType::kSharedOld);
