@@ -150,7 +150,7 @@ AllocationResult OldLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
   }
 
   if (origin != AllocationOrigin::kGC) {
-    heap()->isolate()->CountTotalAllocatedBytes(object_size);
+    heap()->isolate()->AddTotalAllocatedBytes(object_size);
   }
 
   return AllocationResult::FromObject(object);
@@ -421,7 +421,7 @@ AllocationResult NewLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
                                       static_cast<size_t>(object_size));
 
   if (origin != AllocationOrigin::kGC) {
-    heap()->isolate()->CountTotalAllocatedBytes(object_size);
+    heap()->isolate()->AddTotalAllocatedBytes(object_size);
   }
 
   return AllocationResult::FromObject(result);

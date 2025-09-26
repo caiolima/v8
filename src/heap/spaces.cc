@@ -63,13 +63,13 @@ Space* SpaceIterator::Next() {
   return space;
 }
 
-uint64_t Space::GetTotalAllocatedBytes() const {
+uint64_t Space::GetTotalAllocatedBytesInLAA() const {
   uint64_t total_bytes = 0;
   HeapAllocator* allocator = heap_->allocator();
 
   // Here we check spaces that might have allocations in their current
-  // LinearAllocationArea that hasn't been freed yet. It means that they aren't
-  // counted on total_allocated_bytes yet.
+  // LinearAllocationArea that hasn't been freed yet, which means that they
+  // weren't added to the total allocation counter.
   MainAllocator* space_allocator = nullptr;
   switch (identity()) {
     case NEW_SPACE: {
