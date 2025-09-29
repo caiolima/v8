@@ -142,8 +142,6 @@ class V8_EXPORT_PRIVATE Space : public BaseSpace {
   std::atomic<size_t> external_backing_store_bytes_[static_cast<int>(
       ExternalBackingStoreType::kNumValues)] = {0};
   std::unique_ptr<FreeList> free_list_;
-  // uint64_t total_allocated_bytes = 0;
-  // uint64_t total_allocated_bytes_in_gc = 0;
 };
 
 static_assert(sizeof(std::atomic<intptr_t>) == kSystemPointerSize);
