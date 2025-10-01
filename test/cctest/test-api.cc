@@ -17713,15 +17713,16 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
   create_params.array_buffer_allocator = CcTest::array_buffer_allocator();
   v8::Isolate* isolate = v8::Isolate::New(create_params);
 
-  const uint number_of_elements = 1;
-  const uint allocation_size = i::FixedArray::SizeFor(number_of_elements);
-  const uint trusted_allocation_size =
+  const uint32_t number_of_elements = 1;
+  const uint32_t allocation_size = i::FixedArray::SizeFor(number_of_elements);
+  const uint32_t trusted_allocation_size =
       i::TrustedFixedArray::SizeFor(number_of_elements);
-  const uint lo_number_of_elements = 256 * 1024;
-  const uint lo_allocation_size = i::FixedArray::SizeFor(lo_number_of_elements);
-  const uint trusted_lo_allocation_size =
+  const uint32_t lo_number_of_elements = 256 * 1024;
+  const uint32_t lo_allocation_size =
+      i::FixedArray::SizeFor(lo_number_of_elements);
+  const uint32_t trusted_lo_allocation_size =
       i::TrustedFixedArray::SizeFor(lo_number_of_elements);
-  const uint expected_allocation_size =
+  const uint32_t expected_allocation_size =
       allocation_size * 2 + lo_allocation_size * 2 + trusted_allocation_size +
       trusted_lo_allocation_size;
 
@@ -17735,17 +17736,21 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
     isolate->GetHeapStatistics(&heap_stats_before);
     size_t initial_allocated = heap_stats_before.total_allocated_bytes();
 
-    auto young_alloc = i_isolate->factory()->TryNewFixedArray(
-        number_of_elements, i::AllocationType::kYoung);
+    i::MaybeHandle<i::FixedArray> young_alloc =
+        i_isolate->factory()->TryNewFixedArray(number_of_elements,
+                                               i::AllocationType::kYoung);
     USE(young_alloc);
-    auto old_alloc = i_isolate->factory()->TryNewFixedArray(
-        number_of_elements, i::AllocationType::kOld);
+    i::MaybeHandle<i::FixedArray> old_alloc =
+        i_isolate->factory()->TryNewFixedArray(number_of_elements,
+                                               i::AllocationType::kOld);
     USE(old_alloc);
-    auto trusted_alloc = i_isolate->factory()->NewTrustedFixedArray(
-        number_of_elements, i::AllocationType::kTrusted);
+    i::Handle<i::TrustedFixedArray> trusted_alloc =
+        i_isolate->factory()->NewTrustedFixedArray(number_of_elements,
+                                                   i::AllocationType::kTrusted);
     USE(trusted_alloc);
-    auto old_lo_alloc = i_isolate->factory()->TryNewFixedArray(
-        lo_number_of_elements, i::AllocationType::kOld);
+    i::MaybeHandle<i::FixedArray> old_lo_alloc =
+        i_isolate->factory()->TryNewFixedArray(lo_number_of_elements,
+                                               i::AllocationType::kOld);
     USE(old_lo_alloc);
 
     {
@@ -17782,11 +17787,12 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
   isolate->Dispose();
 }
 
+#if V8_CAN_CREATE_SHARED_HEAP_BOOL
+
 UNINITIALIZED_TEST(GetHeapTotalAllocatedBytesSharedSpaces) {
   // This test is incompatible with concurrent allocation, which may occur
   // while collecting the statistics and break the final `CHECK_EQ`s.
   if (i::v8_flags.stress_concurrent_allocation) return;
-  if (!V8_CAN_CREATE_SHARED_HEAP_BOOL) return;
   if (COMPRESS_POINTERS_IN_MULTIPLE_CAGES_BOOL) return;
 
   i::v8_flags.shared_heap = true;
@@ -17807,31 +17813,28 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytesSharedSpaces) {
 
     i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate);
 
-    const uint number_of_elements = 1;
-    const uint allocation_size = i::FixedArray::SizeFor(number_of_elements);
-    const uint trusted_allocation_size =
+    const uint32_t number_of_elements = 1;
+    const uint32_t allocation_size = i::FixedArray::SizeFor(number_of_elements);
+    const uint32_t trusted_allocation_size =
         i::TrustedFixedArray::SizeFor(number_of_elements);
-    const uint lo_number_of_elements = 256 * 1024;
-    const uint lo_allocation_size =
+    const uint32_t lo_number_of_elements = 256 * 1024;
+    const uint32_t lo_allocation_size =
         i::FixedArray::SizeFor(lo_number_of_elements);
-    const uint trusted_lo_allocation_size =
-        i::FixedArray::SizeFor(lo_number_of_elements);
-    const uint expected_allocation_size =
-        allocation_size + trusted_allocation_size + lo_allocation_size +
-        trusted_lo_allocation_size;
+    const uint32_t expected_allocation_size =
+        allocation_size + trusted_allocation_size + lo_allocation_size;
 
-    auto shared_alloc = i_isolate->factory()->NewTrustedFixedArray(
-        number_of_elements, i::AllocationType::kSharedOld);
+    i::MaybeHandle<i::FixedArray> shared_alloc =
+        i_isolate->factory()->TryNewFixedArray(number_of_elements,
+                                               i::AllocationType::kSharedOld);
     USE(shared_alloc);
-    auto shared_trusted_alloc = i_isolate->factory()->NewTrustedFixedArray(
-        number_of_elements, i::AllocationType::kSharedTrusted);
+    i::Handle<i::TrustedFixedArray> shared_trusted_alloc =
+        i_isolate->factory()->NewTrustedFixedArray(
+            number_of_elements, i::AllocationType::kSharedTrusted);
     USE(shared_trusted_alloc);
-    auto shared_lo_alloc = i_isolate->factory()->TryNewFixedArray(
-        lo_number_of_elements, i::AllocationType::kSharedOld);
+    i::MaybeHandle<i::FixedArray> shared_lo_alloc =
+        i_isolate->factory()->TryNewFixedArray(lo_number_of_elements,
+                                               i::AllocationType::kSharedOld);
     USE(shared_lo_alloc);
-    auto shared_trusted_lo_alloc = i_isolate->factory()->NewTrustedFixedArray(
-        lo_number_of_elements, i::AllocationType::kSharedTrusted);
-    USE(shared_trusted_lo_alloc);
 
     v8::HeapStatistics heap_stats_after;
     isolate->GetHeapStatistics(&heap_stats_after);
@@ -17874,6 +17877,8 @@ TEST(NumberOfNativeContexts) {
              heap_statistics.number_of_native_contexts());
   }
 }
+
+#endif  // V8_CAN_CREATE_SHARED_HEAP_BOOL
 
 TEST(NumberOfDetachedContexts) {
   static const size_t kNumTestContexts = 10;
