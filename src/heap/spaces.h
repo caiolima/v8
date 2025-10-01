@@ -91,7 +91,7 @@ class V8_EXPORT_PRIVATE Space : public BaseSpace {
   inline void DecrementExternalBackingStoreBytes(ExternalBackingStoreType type,
                                                  size_t amount);
 
-  // Returns the total of bytes curretly allocated in a LinearAllocationArea.
+  // Returns the total of bytes currently allocated in a LinearAllocationArea.
   // It's used to properly calculate total allocated bytes in an isolate.
   virtual uint64_t GetTotalAllocatedBytesInLAA() const;
 

@@ -17772,7 +17772,7 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
     uint64_t allocated_diff = final_allocated - initial_allocated;
     CHECK_EQ(allocated_diff, expected_allocation_size);
 
-    // This either tests counting happening when a LAB freed and validade
+    // This either tests counting happening when a LAB freed and validate
     // there's no double counting on evacuated/promoted objects.
     v8::internal::heap::InvokeAtomicMajorGC(i_isolate->heap());
 
