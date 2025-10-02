@@ -17848,6 +17848,8 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytesSharedSpaces) {
   isolate->Dispose();
 }
 
+#endif  // V8_CAN_CREATE_SHARED_HEAP_BOOL
+
 TEST(NumberOfNativeContexts) {
   static const size_t kNumTestContexts = 10;
   i::Isolate* isolate = CcTest::i_isolate();
@@ -17877,8 +17879,6 @@ TEST(NumberOfNativeContexts) {
              heap_statistics.number_of_native_contexts());
   }
 }
-
-#endif  // V8_CAN_CREATE_SHARED_HEAP_BOOL
 
 TEST(NumberOfDetachedContexts) {
   static const size_t kNumTestContexts = 10;
