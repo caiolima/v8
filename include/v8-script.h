@@ -270,7 +270,7 @@ class V8_EXPORT Module : public Data {
    *
    * The module's status must be at least kInstantiated.
    */
-  Local<Value> GetModuleNamespace(v8::ModuleImportPhase phase);
+  Local<Value> GetModuleNamespace(v8::ModuleImportPhase phase = v8::ModuleImportPhase::kEvaluation);
 
   /**
    * Returns the corresponding context-unbound module script.
