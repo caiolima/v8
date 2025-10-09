@@ -121,6 +121,10 @@ void MainAllocator::PauseAllocationObservers() { DCHECK(!IsLabValid()); }
 void MainAllocator::ResumeAllocationObservers() { DCHECK(!IsLabValid()); }
 
 void MainAllocator::AdvanceAllocationObservers() {
+  if (!in_gc()) {
+    local_heap_->allocator()->AddTotalAllocatedBytes(allocation_info().top() -
+                                                     allocation_info().start());
+  }
   if (SupportsAllocationObserver() && allocation_info().top() &&
       allocation_info().start() != allocation_info().top()) {
     if (isolate_heap()->IsAllocationObserverActive()) {
@@ -523,10 +527,6 @@ void SemiSpaceNewSpaceAllocatorPolicy::
   Address current_top = allocator_->top();
   Address current_limit = allocator_->limit();
 
-  if (!allocator_->in_gc()) {
-    isolate_heap()->isolate()->AddTotalAllocatedBytes(allocator_->top() -
-                                                      allocator_->start());
-  }
   allocator_->AdvanceAllocationObservers();
   allocator_->ResetLab(kNullAddress, kNullAddress, kNullAddress);
 
@@ -891,10 +891,6 @@ bool PagedSpaceAllocatorPolicy::TryExtendLAB(int size_in_bytes) {
   if (current_top + size_in_bytes > max_limit) {
     return false;
   }
-  if (!allocator_->in_gc()) {
-    isolate_heap()->isolate()->AddTotalAllocatedBytes(allocator_->top() -
-                                                      allocator_->start());
-  }
   allocator_->AdvanceAllocationObservers();
   Address new_limit =
       allocator_->ComputeLimit(current_top, max_limit, size_in_bytes);
@@ -931,10 +927,6 @@ void PagedSpaceAllocatorPolicy::FreeLinearAllocationAreaUnsynchronized() {
   DCHECK_IMPLIES(!allocator_->supports_extending_lab(),
                  current_max_limit == current_limit);
 
-  if (!allocator_->in_gc()) {
-    isolate_heap()->isolate()->AddTotalAllocatedBytes(allocator_->top() -
-                                                      allocator_->start());
-  }
   allocator_->AdvanceAllocationObservers();
 
   if (!v8_flags.black_allocated_pages) {

@@ -1703,6 +1703,8 @@ class Heap final {
   bool ShouldUseBackgroundThreads() const;
   bool ShouldUseIncrementalMarking() const;
 
+  uint64_t GetTotalAllocatedBytes();
+
   HeapAllocator* allocator() { return heap_allocator_; }
   const HeapAllocator* allocator() const { return heap_allocator_; }
 

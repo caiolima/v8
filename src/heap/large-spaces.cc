@@ -101,15 +101,13 @@ void LargeObjectSpace::RemoveAllocationObserver(AllocationObserver* observer) {
 
 AllocationResult OldLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
                                                   int object_size,
-                                                  AllocationOrigin origin,
                                                   AllocationHint hint) {
-  return AllocateRaw(local_heap, object_size, NOT_EXECUTABLE, origin, hint);
+  return AllocateRaw(local_heap, object_size, NOT_EXECUTABLE, hint);
 }
 
 AllocationResult OldLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
                                                   int object_size,
                                                   Executability executable,
-                                                  AllocationOrigin origin,
                                                   AllocationHint hint) {
   object_size = ALIGN_TO_ALLOCATION_ALIGNMENT(object_size);
   DCHECK_IMPLIES(identity() == SHARED_LO_SPACE,
@@ -148,11 +146,6 @@ AllocationResult OldLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
     AdvanceAndInvokeAllocationObservers(object.address(),
                                         static_cast<size_t>(object_size));
   }
-
-  if (origin != AllocationOrigin::kGC) {
-    heap()->isolate()->AddTotalAllocatedBytes(object_size);
-  }
-
   return AllocationResult::FromObject(object);
 }
 
@@ -383,7 +376,6 @@ NewLargeObjectSpace::NewLargeObjectSpace(Heap* heap, size_t capacity)
 
 AllocationResult NewLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
                                                   int object_size,
-                                                  AllocationOrigin origin,
                                                   AllocationHint hint) {
   object_size = ALIGN_TO_ALLOCATION_ALIGNMENT(object_size);
   DCHECK(local_heap->is_main_thread());
@@ -419,11 +411,6 @@ AllocationResult NewLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
   DCHECK_EQ(page->owner_identity(), NEW_LO_SPACE);
   AdvanceAndInvokeAllocationObservers(result.address(),
                                       static_cast<size_t>(object_size));
-
-  if (origin != AllocationOrigin::kGC) {
-    heap()->isolate()->AddTotalAllocatedBytes(object_size);
-  }
-
   return AllocationResult::FromObject(result);
 }
 
@@ -476,10 +463,9 @@ CodeLargeObjectSpace::CodeLargeObjectSpace(Heap* heap)
 
 AllocationResult CodeLargeObjectSpace::AllocateRaw(LocalHeap* local_heap,
                                                    int object_size,
-                                                   AllocationOrigin origin,
                                                    AllocationHint hint) {
   return OldLargeObjectSpace::AllocateRaw(local_heap, object_size, EXECUTABLE,
-                                          origin, hint);
+                                          hint);
 }
 
 void CodeLargeObjectSpace::AddPage(LargePageMetadata* page,

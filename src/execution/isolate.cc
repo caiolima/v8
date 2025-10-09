@@ -3811,14 +3811,6 @@ DirectHandle<NativeContext> Isolate::GetIncumbentContextSlow() {
   return Utils::OpenDirectHandle(*entered_context);
 }
 
-uint64_t Isolate::GetTotalAllocatedBytes() {
-  uint64_t total_bytes = total_allocated_bytes_;
-  for (SpaceIterator it(this->heap()); it.HasNext();) {
-    total_bytes += it.Next()->GetTotalAllocatedBytesInLAA();
-  }
-  return total_bytes;
-}
-
 char* Isolate::ArchiveThread(char* to) {
   MemCopy(to, reinterpret_cast<char*>(thread_local_top()),
           sizeof(ThreadLocalTop));
