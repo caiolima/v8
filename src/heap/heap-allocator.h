@@ -117,8 +117,7 @@ class V8_EXPORT_PRIVATE HeapAllocator final {
   void FreeSharedLinearAllocationAreasAndResetFreeLists();
 
   void AddTotalAllocatedBytes(size_t size) { total_allocated_bytes_ += size; }
-
-  uint64_t GetTotalAllocatedBytes() { return total_allocated_bytes_; }
+  uint64_t GetTotalAllocatedBytes();
 
   void PauseAllocationObservers();
   void ResumeAllocationObservers();

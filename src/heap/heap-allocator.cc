@@ -359,6 +359,40 @@ void HeapAllocator::FreeLinearAllocationAreas() {
   }
 }
 
+uint64_t HeapAllocator::GetTotalAllocatedBytes() {
+  uint64_t total_allocated_bytes = total_allocated_bytes_;
+
+  // Check LinearAllocationArea that might have allocations that hasn't been
+  // freed yet, which means that they weren't added to the total allocation
+  // counter.
+  if (new_space_allocator_) {
+    total_allocated_bytes +=
+        new_space_allocator_->top() - new_space_allocator_->start();
+  }
+  if (old_space_allocator_) {
+    total_allocated_bytes +=
+        old_space_allocator_->top() - old_space_allocator_->start();
+  }
+  if (trusted_space_allocator_) {
+    total_allocated_bytes +=
+        trusted_space_allocator_->top() - trusted_space_allocator_->start();
+  }
+  if (code_space_allocator_) {
+    total_allocated_bytes +=
+        code_space_allocator_->top() - code_space_allocator_->start();
+  }
+  if (shared_space_allocator_) {
+    total_allocated_bytes +=
+        shared_space_allocator_->top() - shared_space_allocator_->start();
+  }
+  if (shared_trusted_space_allocator_) {
+    total_allocated_bytes += shared_trusted_space_allocator_->top() -
+                             shared_trusted_space_allocator_->start();
+  }
+
+  return total_allocated_bytes;
+}
+
 void HeapAllocator::PublishPendingAllocations() {
   if (new_space_allocator_) {
     new_space_allocator_->MoveOriginalTopForward();
