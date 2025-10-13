@@ -119,7 +119,7 @@ AllocationResult HeapAllocator::AllocateRawLargeInternal(
   }
   if (!allocation_result.IsFailure()) {
     int allocated_size = ALIGN_TO_ALLOCATION_ALIGNMENT(size_in_bytes);
-    AddTotalAllocatedBytes(allocated_size);
+    total_allocated_bytes_ += allocated_size;
   }
   return allocation_result;
 }
