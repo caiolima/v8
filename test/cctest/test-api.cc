@@ -17770,7 +17770,7 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytes) {
 
     CHECK_GT(final_allocated, initial_allocated);
     uint64_t allocated_diff = final_allocated - initial_allocated;
-    CHECK_EQ(allocated_diff, expected_allocation_size);
+    CHECK_GE(allocated_diff, expected_allocation_size);
 
     // This either tests counting happening when a LAB freed and validate
     // there's no double counting on evacuated/promoted objects.
@@ -17842,7 +17842,7 @@ UNINITIALIZED_TEST(GetHeapTotalAllocatedBytesSharedSpaces) {
 
     CHECK_GT(final_allocated, initial_allocated);
     uint64_t allocated_diff = final_allocated - initial_allocated;
-    CHECK_EQ(allocated_diff, expected_allocation_size);
+    CHECK_GE(allocated_diff, expected_allocation_size);
   }
 
   isolate->Dispose();

@@ -7867,7 +7867,6 @@ int Heap::NextStackTraceId() {
 }
 
 uint64_t Heap::GetTotalAllocatedBytes() {
-  SafepointScope safe_scope(isolate_, SafepointKind::kIsolate);
   uint64_t total_allocated_bytes = 0;
   safepoint()->IterateLocalHeaps([&](LocalHeap* local_heap) {
     total_allocated_bytes += local_heap->allocator()->GetTotalAllocatedBytes();

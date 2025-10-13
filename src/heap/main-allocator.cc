@@ -121,10 +121,6 @@ void MainAllocator::PauseAllocationObservers() { DCHECK(!IsLabValid()); }
 void MainAllocator::ResumeAllocationObservers() { DCHECK(!IsLabValid()); }
 
 void MainAllocator::AdvanceAllocationObservers() {
-  if (!in_gc()) {
-    local_heap_->allocator()->AddTotalAllocatedBytes(allocation_info().top() -
-                                                     allocation_info().start());
-  }
   if (SupportsAllocationObserver() && allocation_info().top() &&
       allocation_info().start() != allocation_info().top()) {
     if (isolate_heap()->IsAllocationObserverActive()) {
@@ -301,6 +297,12 @@ void MainAllocator::ResetLab(Address start, Address end, Address extended_end) {
     MemoryChunkMetadata::UpdateHighWaterMark(top());
   }
 
+  // This is going to overestimate a bit total allocated bytes, since the LAB
+  // was not used yet, however compared to fluctuation already observed due to
+  // concurrent optimizations, this seems tolerable.
+  if (local_heap_) {
+    local_heap_->allocator()->AddTotalAllocatedBytes(end - start);
+  }
   allocation_info().Reset(start, end);
   extended_limit_ = extended_end;
 

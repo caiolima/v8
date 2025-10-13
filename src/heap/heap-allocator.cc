@@ -360,37 +360,19 @@ void HeapAllocator::FreeLinearAllocationAreas() {
 }
 
 uint64_t HeapAllocator::GetTotalAllocatedBytes() {
-  uint64_t total_allocated_bytes = total_allocated_bytes_;
+  // It's expected that FreeLinearAllocationAreas is called before calling this.
+  // This way, all LABs should be invalid at this point.
+  DCHECK_IMPLIES(new_space_allocator_, !new_space_allocator_->IsLabValid());
+  DCHECK_IMPLIES(old_space_allocator_, !old_space_allocator_->IsLabValid());
+  DCHECK_IMPLIES(trusted_space_allocator_,
+                 !trusted_space_allocator_->IsLabValid());
+  DCHECK_IMPLIES(code_space_allocator_, !code_space_allocator_->IsLabValid());
+  DCHECK_IMPLIES(shared_space_allocator_,
+                 !shared_space_allocator_->IsLabValid());
+  DCHECK_IMPLIES(shared_trusted_space_allocator_,
+                 !shared_trusted_space_allocator_->IsLabValid());
 
-  // Check LinearAllocationArea that might have allocations that hasn't been
-  // freed yet, which means that they weren't added to the total allocation
-  // counter.
-  if (new_space_allocator_) {
-    total_allocated_bytes +=
-        new_space_allocator_->top() - new_space_allocator_->start();
-  }
-  if (old_space_allocator_) {
-    total_allocated_bytes +=
-        old_space_allocator_->top() - old_space_allocator_->start();
-  }
-  if (trusted_space_allocator_) {
-    total_allocated_bytes +=
-        trusted_space_allocator_->top() - trusted_space_allocator_->start();
-  }
-  if (code_space_allocator_) {
-    total_allocated_bytes +=
-        code_space_allocator_->top() - code_space_allocator_->start();
-  }
-  if (shared_space_allocator_) {
-    total_allocated_bytes +=
-        shared_space_allocator_->top() - shared_space_allocator_->start();
-  }
-  if (shared_trusted_space_allocator_) {
-    total_allocated_bytes += shared_trusted_space_allocator_->top() -
-                             shared_trusted_space_allocator_->start();
-  }
-
-  return total_allocated_bytes;
+  return total_allocated_bytes_;
 }
 
 void HeapAllocator::PublishPendingAllocations() {
