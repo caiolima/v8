@@ -392,12 +392,10 @@ transitioning javascript builtin PromiseAllSettled(
       PromiseAllSettledRejectElementFunctor{}, 'Promise.allSettled');
 }
 
-transitioning macro PerformPromiseAllFixedArray<F1: type, F2: type>(
+transitioning macro PerformPromiseAllFixedArray(
     implicit context: Context)(nativeContext: NativeContext,
-    fixedArray: FixedArray, constructor: Constructor,
-    capability: PromiseCapability, promiseResolveFunction: JSAny,
-    createResolveElementFunctor: F1,
-    createRejectElementFunctor: F2): JSAny {
+    fixedArray: FixedArray,
+    capability: PromiseCapability): JSAny {
   const promise = capability.promise;
   const resolve = capability.resolve;
   const reject = capability.reject;
@@ -417,6 +415,7 @@ transitioning macro PerformPromiseAllFixedArray<F1: type, F2: type>(
   // Iterate directly over the FixedArray
   for (let i: intptr = 0; i < length; i++) {
     const nextValue: JSAny = UnsafeCast<JSAny>(fixedArray.objects[i]);
+    check(Is<JSPromise>(nextValue));
 
     // Check if we reached the limit.
     if (index == kPropertyArrayHashFieldMax) {
@@ -431,33 +430,14 @@ transitioning macro PerformPromiseAllFixedArray<F1: type, F2: type>(
         PromiseAllResolveElementContextSlots::
             kPromiseAllResolveElementRemainingSlot) += 1;
 
-    const resolveElementFun = createResolveElementFunctor.Call(
+    const resolveElementFun = PromiseAllResolveElementFunctor{}.Call(
         resolveElementContext, nativeContext, index, capability);
-    const rejectElementFun = createRejectElementFunctor.Call(
+    const rejectElementFun = PromiseAllRejectElementFunctor{}.Call(
         resolveElementContext, nativeContext, index, capability);
 
-    // Same optimization logic as in PerformPromiseAll
-    if (promiseResolveFunction != Undefined || NeedsAnyPromiseHooks() ||
-        IsPromiseSpeciesProtectorCellInvalid() || Is<Smi>(nextValue) ||
-        !IsPromiseThenLookupChainIntact(
-            nativeContext, UnsafeCast<HeapObject>(nextValue).map)) {
-      const nextPromise =
-          CallResolve(constructor, promiseResolveFunction, nextValue);
-
-      const then = GetProperty(nextPromise, kThenString);
-      const thenResult = Call(
-          nativeContext, then, nextPromise, resolveElementFun,
-          rejectElementFun);
-
-      if (IsDebugActive() && Is<JSPromise>(thenResult)) deferred {
-          SetPropertyStrict(
-              context, thenResult, kPromiseHandledBySymbol, promise);
-        }
-    } else {
-      PerformPromiseThenImpl(
-          UnsafeCast<JSPromise>(nextValue), resolveElementFun,
-          rejectElementFun, Undefined);
-    }
+    PerformPromiseThenImpl(
+        UnsafeCast<JSPromise>(nextValue), resolveElementFun,
+        rejectElementFun, Undefined);
 
     index += 1;
   }
@@ -511,39 +491,27 @@ transitioning macro PerformPromiseAllFixedArray<F1: type, F2: type>(
   return promise;
 }
 
-// Public builtin for Promise.all with FixedArray
 // This directly iterates over the FixedArray without using iterator protocol
 transitioning javascript builtin PromiseAllFixedArray(
-    js-implicit context: Context, receiver: JSAny)(fixedArray: JSAny): JSAny {
+    js-implicit context: Context)(fixedArray: JSAny): JSAny {
   const nativeContext = LoadNativeContext(context);
-
-  // Let C be the this value.
-  // If Type(C) is not Object, throw a TypeError exception.
-  const receiver = Cast<JSReceiver>(receiver)
-      otherwise ThrowTypeError(MessageTemplate::kCalledOnNonObject, 'Promise.allFixedArray');
 
   // Cast and validate the FixedArray
   const array = Cast<FixedArray>(fixedArray)
       otherwise ThrowTypeError(
           MessageTemplate::kIncompatibleMethodReceiver,
-          'Promise.allFixedArray', fixedArray);
+          'PromiseAllFixedArray', fixedArray);
 
-  // Let promiseCapability be ? NewPromiseCapability(C).
-  const capability = NewPromiseCapability(receiver, False);
+  // Use internal Promise constructor directly from NativeContext
+  // This guarantees we're using the original, unclobbered Promise implementation
+  const constructor = UnsafeCast<Constructor>(
+      *NativeContextSlot(nativeContext, ContextSlot::PROMISE_FUNCTION_INDEX));
 
-  // NewPromiseCapability guarantees that receiver is Constructor.
-  dcheck(Is<Constructor>(receiver));
-  const constructor = UnsafeCast<Constructor>(receiver);
-
-  // Let promiseResolve be GetPromiseResolve(C).
-  // IfAbruptRejectPromise(promiseResolve, promiseCapability).
-  const promiseResolveFunction =
-      GetPromiseResolve(nativeContext, constructor);
+  // Let promiseCapability be ? NewPromiseCapability(Promise).
+  const capability = NewPromiseCapability(constructor, False);
 
   // Perform Promise.all logic directly on the FixedArray
-  return PerformPromiseAllFixedArray(
-      nativeContext, array, constructor, capability, promiseResolveFunction,
-      PromiseAllResolveElementFunctor{}, PromiseAllRejectElementFunctor{});
+  return PerformPromiseAllFixedArray(nativeContext, array, capability);
 }
 
 extern macro MakeFixedArrayCOW(FixedArray): void;

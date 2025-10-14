@@ -2368,15 +2368,14 @@ MaybeLocal<Value> Module::DeferredEvaluate(Local<Context> context) {
   // Use PromiseAllFixedArray builtin to avoid Array.prototype pollution
   // This directly processes the FixedArray without any iteration protocol
   i::DirectHandle<i::NativeContext> native_context = i_isolate->native_context();
-  i::DirectHandle<i::JSFunction> promise_constructor = i::DirectHandle<i::JSFunction>(
-      native_context->promise_function(), i_isolate);
 
   i::DirectHandle<i::Object> argv[] = {promises_fixed_array};
   i::DirectHandle<i::JSFunction> promise_all_function =
       i::direct_handle(native_context->promise_all_fixed_array(), i_isolate);
+  // Use undefined as receiver since PromiseAllFixedArray uses internal Promise constructor
   i::MaybeHandle<i::Object> maybe_promise_all_result = i::Execution::CallBuiltin(
       i_isolate, promise_all_function,
-      promise_constructor, base::VectorOf(argv));
+      i_isolate->factory()->undefined_value(), base::VectorOf(argv));
 
   i::Handle<i::Object> promise_all_result;
   if (maybe_promise_all_result.ToHandle(&promise_all_result)) {
