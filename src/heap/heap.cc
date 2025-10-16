@@ -7867,11 +7867,7 @@ int Heap::NextStackTraceId() {
 }
 
 uint64_t Heap::GetTotalAllocatedBytes() {
-  uint64_t total_allocated_bytes = 0;
-  safepoint()->IterateLocalHeaps([&](LocalHeap* local_heap) {
-    total_allocated_bytes += local_heap->allocator()->GetTotalAllocatedBytes();
-  });
-  return total_allocated_bytes;
+  return total_allocated_bytes_.load(std::memory_order_relaxed);
 }
 
 EmbedderStackStateScope::EmbedderStackStateScope(

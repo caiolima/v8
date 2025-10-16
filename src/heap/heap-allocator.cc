@@ -119,7 +119,7 @@ AllocationResult HeapAllocator::AllocateRawLargeInternal(
   }
   if (!allocation_result.IsFailure()) {
     int allocated_size = ALIGN_TO_ALLOCATION_ALIGNMENT(size_in_bytes);
-    total_allocated_bytes_ += allocated_size;
+    heap_->AddTotalAllocatedBytes(allocated_size);
   }
   return allocation_result;
 }
@@ -357,22 +357,6 @@ void HeapAllocator::FreeLinearAllocationAreas() {
   if (shared_trusted_space_allocator_) {
     shared_trusted_space_allocator_->FreeLinearAllocationArea();
   }
-}
-
-uint64_t HeapAllocator::GetTotalAllocatedBytes() {
-  // It's expected that FreeLinearAllocationAreas is called before calling this.
-  // This way, all LABs should be invalid at this point.
-  DCHECK_IMPLIES(new_space_allocator_, !new_space_allocator_->IsLabValid());
-  DCHECK_IMPLIES(old_space_allocator_, !old_space_allocator_->IsLabValid());
-  DCHECK_IMPLIES(trusted_space_allocator_,
-                 !trusted_space_allocator_->IsLabValid());
-  DCHECK_IMPLIES(code_space_allocator_, !code_space_allocator_->IsLabValid());
-  DCHECK_IMPLIES(shared_space_allocator_,
-                 !shared_space_allocator_->IsLabValid());
-  DCHECK_IMPLIES(shared_trusted_space_allocator_,
-                 !shared_trusted_space_allocator_->IsLabValid());
-
-  return total_allocated_bytes_;
 }
 
 void HeapAllocator::PublishPendingAllocations() {

@@ -10171,16 +10171,11 @@ void Isolate::GetHeapStatistics(HeapStatistics* heap_statistics) {
   i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(this);
   i::Heap* heap = i_isolate->heap();
 
-  i::SafepointKind safepoint_kind = i_isolate->is_shared_space_isolate()
-                                        ? i::SafepointKind::kGlobal
-                                        : i::SafepointKind::kIsolate;
-  i::SafepointScope safe_scope(i_isolate, safepoint_kind);
-
   // Embedder may call GetHeapStatistics() from any thread. Make sure to set the
   // TLS variable to *this.
   i::SetCurrentIsolateScope set_current_isolate(i_isolate);
 
-  heap->FreeLinearAllocationAreas();
+  heap->FreeMainThreadLinearAllocationAreas();
 
   // The order of acquiring memory statistics is important here. We query in
   // this order because of concurrent allocation: 1) used memory 2) committed

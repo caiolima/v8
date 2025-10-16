@@ -116,9 +116,6 @@ class V8_EXPORT_PRIVATE HeapAllocator final {
   void FreeLinearAllocationAreasAndResetFreeLists();
   void FreeSharedLinearAllocationAreasAndResetFreeLists();
 
-  void AddTotalAllocatedBytes(size_t size) { total_allocated_bytes_ += size; }
-  uint64_t GetTotalAllocatedBytes();
-
   void PauseAllocationObservers();
   void ResumeAllocationObservers();
 
@@ -220,7 +217,6 @@ class V8_EXPORT_PRIVATE HeapAllocator final {
 
   std::optional<Address> last_young_allocation_;
   Address* last_young_allocation_pointer_ = nullptr;
-  uint64_t total_allocated_bytes_ = 0;
 
 #ifdef V8_ENABLE_ALLOCATION_TIMEOUT
   // Specifies how many allocations should be performed until returning

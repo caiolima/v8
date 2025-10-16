@@ -301,7 +301,7 @@ void MainAllocator::ResetLab(Address start, Address end, Address extended_end) {
   // was not used yet, however compared to fluctuation already observed due to
   // concurrent optimizations, this seems tolerable.
   if (local_heap_) {
-    local_heap_->allocator()->AddTotalAllocatedBytes(end - start);
+    local_heap_->heap()->AddTotalAllocatedBytes(end - start);
   }
   allocation_info().Reset(start, end);
   extended_limit_ = extended_end;
