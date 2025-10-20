@@ -297,9 +297,9 @@ void MainAllocator::ResetLab(Address start, Address end, Address extended_end) {
     MemoryChunkMetadata::UpdateHighWaterMark(top());
   }
 
-  // This is going to overestimate a bit total allocated bytes, since the LAB
-  // was not used yet, however compared to fluctuation already observed due to
-  // concurrent optimizations, this seems tolerable.
+  // This is going to overestimate a bit of the total allocated bytes, since the
+  // LAB was not used yet. However the leftover compared to the LAB itself is
+  // quite small, so it seems tolerable.
   if (local_heap_) {
     local_heap_->heap()->AddTotalAllocatedBytes(end - start);
   }
