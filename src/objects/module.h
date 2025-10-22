@@ -140,6 +140,7 @@ class JSModuleNamespace
       Isolate* isolate, DirectHandle<String> name);
 
   bool HasExport(Isolate* isolate, DirectHandle<String> name);
+  bool IsDeferred(Isolate* isolate);
 
   // Return the (constant) property attributes for the referenced property,
   // which is assumed to correspond to an export. If the export is
@@ -155,9 +156,6 @@ class JSModuleNamespace
       DirectHandle<Object> key, PropertyDescriptor* desc,
       Maybe<ShouldThrow> should_throw);
 
-  // Boolean accessors for flags
-  DECL_BOOLEAN_ACCESSORS(deferred_evaluation)
-
   // In-object fields.
   enum {
     kToStringTagFieldIndex,
@@ -171,8 +169,6 @@ class JSModuleNamespace
 
   TQ_OBJECT_CONSTRUCTORS(JSModuleNamespace)
  private:
-  // Bits for flags.
-  DEFINE_TORQUE_GENERATED_JS_MODULE_NAMESPACE_FLAGS()
 };
 
 class ScriptOrModule

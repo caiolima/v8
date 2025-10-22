@@ -243,8 +243,8 @@ void Accessors::ModuleNamespaceEntryGetter(
     v8::Local<v8::Name> name, const v8::PropertyCallbackInfo<v8::Value>& info) {
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
   HandleScope scope(isolate);
-  DirectHandle<JSModuleNamespace> holder =
-      Cast<JSModuleNamespace>(Utils::OpenDirectHandle(*info.Holder()));
+  Tagged<JSModuleNamespace> holder =
+      Cast<JSModuleNamespace>(*Utils::OpenDirectHandle(*info.Holder()));
   DirectHandle<Object> result;
   if (holder->GetExport(isolate, Cast<String>(Utils::OpenDirectHandle(*name)))
           .ToHandle(&result)) {

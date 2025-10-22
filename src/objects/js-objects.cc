@@ -107,7 +107,7 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
       DirectHandle<Name> name = it->GetName();
       Isolate* isolate = it->isolate();
       DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(it->GetReceiver());
-      if (ns->deferred_evaluation() &&
+      if (ns->IsDeferred(isolate) &&
           !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
           !IsSymbol(*name)) {
         JSModuleNamespace::EvaluateDeferredModule(
@@ -987,7 +987,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
     DirectHandle<Name> name = it->GetName();
     Isolate* isolate = it->isolate();
     DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(receiver);
-    if (ns->deferred_evaluation() &&
+    if (ns->IsDeferred(isolate) &&
         !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
         !IsSymbol(*name)) {
       JSModuleNamespace::EvaluateDeferredModule(
@@ -1979,7 +1979,7 @@ Maybe<bool> JSReceiver::GetOwnPropertyDescriptor(LookupIterator* it,
     Isolate* isolate = it->isolate();
     DirectHandle<JSModuleNamespace> ns =
         Cast<JSModuleNamespace>(it->GetReceiver());
-    if (ns->deferred_evaluation() &&
+    if (ns->IsDeferred(isolate) &&
         !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
         !IsSymbol(*name)) {
       JSModuleNamespace::EvaluateDeferredModule(

@@ -18,14 +18,8 @@ extern class Module extends HeapObject {
   top_level_capability: JSPromise|Undefined;
 }
 
-bitfield struct JSModuleNamespaceFlags extends uint32 {
-  deferred_evaluation: bool: 1 bit;
-  // 7 bits available for future flags
-}
-
 extern class JSModuleNamespace extends JSSpecialObject {
   module: Module;
-  flags: JSModuleNamespaceFlags;
 }
 
 extern class ScriptOrModule extends Struct {

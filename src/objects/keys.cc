@@ -1047,7 +1047,7 @@ Maybe<bool> KeyAccumulator::CollectOwnPropertyNames(
     // throws for uninitialized exports.
 
     DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(object);
-    if (ns->deferred_evaluation()) {
+    if (ns->IsDeferred(isolate_)) {
       JSModuleNamespace::EvaluateDeferredModule(isolate_, ns);
       RETURN_VALUE_IF_EXCEPTION(isolate_, Nothing<bool>());
     }

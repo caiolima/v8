@@ -359,7 +359,8 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
 
   // Create the namespace object (initially empty).
   DirectHandle<JSModuleNamespace> ns =
-      isolate->factory()->NewJSModuleNamespace();
+      isolate->factory()->NewJSModuleNamespace(phase);
+  PrintF("Map address: %lu\n", ns->map().ptr());
   ns->set_module(*module);
   if (phase == ModuleImportPhase::kEvaluation) {
     module->set_module_namespace(*ns);
@@ -367,7 +368,6 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
     DCHECK(phase == ModuleImportPhase::kDefer);
     module->set_deferred_module_namespace(*ns);
   }
-  ns->set_deferred_evaluation(phase == ModuleImportPhase::kDefer);
 
   // Create the properties in the namespace object. Transition the object
   // to dictionary mode so that property addition is faster.
@@ -401,12 +401,19 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   DirectHandle<PrototypeInfo> proto_info =
       Map::GetOrCreatePrototypeInfo(ns, isolate);
   proto_info->set_module_namespace(*ns);
+  PrintF("Map address by the end: %lu\n", ns->map().ptr());
   return ns;
 }
 
 bool JSModuleNamespace::HasExport(Isolate* isolate, DirectHandle<String> name) {
   DirectHandle<Object> object(module()->exports()->Lookup(name), isolate);
   return !IsTheHole(*object, isolate);
+}
+
+bool JSModuleNamespace::IsDeferred(Isolate* isolate) {
+  bool result = map() == isolate->native_context()->js_deferred_module_namespace_map();
+  PrintF("deferred: %d\n", result);
+  return result;
 }
 
 MaybeDirectHandle<Object> JSModuleNamespace::GetExport(
@@ -456,7 +463,6 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
 
 void JSModuleNamespace::EvaluateDeferredModule(
     Isolate* isolate, DirectHandle<JSModuleNamespace> holder) {
-  PrintF("Deferred execution.\n");
   Tagged<Module> module = holder->module();
 
   Zone zone(isolate->allocator(), ZONE_NAME);
@@ -464,7 +470,7 @@ void JSModuleNamespace::EvaluateDeferredModule(
   if (!SourceTextModule::ReadyForSyncExecution(
           isolate, handle(module, isolate), &seenModules)) {
     isolate->Throw(*isolate->factory()->NewTypeError(
-        MessageTemplate::kNonEvaluatedDependency));
+        MessageTemplate::kNotReadyForSyncExec));
     return;
   }
 
