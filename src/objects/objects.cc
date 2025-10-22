@@ -1236,16 +1236,14 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
   // It looks like yeah, since we want to trigger evaluation even if
   // it's acessing a undefined property.
   DirectHandle<JSAny> reciever = it->GetReceiver();
-  PrintF("Called GetProperty\n");
-  if (IsJSModuleNamespace(*reciever)) {
-    PrintF("Called here\n");
+  if (IsJSDeferredModuleNamespace(*reciever)) {
     DirectHandle<Name> name = it->GetName();
     Isolate* isolate = it->isolate();
-    DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(reciever);
-    if (ns->IsDeferred(isolate) &&
-        !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
+    DirectHandle<JSDeferredModuleNamespace> ns =
+        Cast<JSDeferredModuleNamespace>(reciever);
+    if (!Name::Equals(isolate, name, isolate->factory()->then_string()) &&
         !IsSymbol(*name)) {
-      JSModuleNamespace::EvaluateDeferredModule(
+      JSDeferredModuleNamespace::EvaluateDeferredModule(
                 it->isolate(), ns);
       RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
     }

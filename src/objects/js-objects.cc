@@ -103,14 +103,14 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
     // TODO(ciaolima): Is this the right place to trigger the evaluation?
     // It looks like yeah, since we want to trigger evaluation even if
     // it's acessing a undefined property.
-    if (IsJSModuleNamespace(*it->GetReceiver())) {
+    if (IsJSDeferredModuleNamespace(*it->GetReceiver())) {
       DirectHandle<Name> name = it->GetName();
       Isolate* isolate = it->isolate();
-      DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(it->GetReceiver());
-      if (ns->IsDeferred(isolate) &&
-          !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
+      DirectHandle<JSDeferredModuleNamespace> ns =
+          Cast<JSDeferredModuleNamespace>(it->GetReceiver());
+      if (!Name::Equals(isolate, name, isolate->factory()->then_string()) &&
           !IsSymbol(*name)) {
-        JSModuleNamespace::EvaluateDeferredModule(
+        JSDeferredModuleNamespace::EvaluateDeferredModule(
                   it->isolate(), ns);
         RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
       }
@@ -983,14 +983,14 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
 
   // TODO(ciaolima): Is this the right place to trigger the evaluation?
   DirectHandle<JSAny> receiver = it->GetReceiver();
-  if (IsJSModuleNamespace(*receiver)) {
+  if (IsJSDeferredModuleNamespace(*receiver)) {
     DirectHandle<Name> name = it->GetName();
     Isolate* isolate = it->isolate();
-    DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(receiver);
-    if (ns->IsDeferred(isolate) &&
-        !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
+    DirectHandle<JSDeferredModuleNamespace> ns =
+        Cast<JSDeferredModuleNamespace>(receiver);
+    if (!Name::Equals(isolate, name, isolate->factory()->then_string()) &&
         !IsSymbol(*name)) {
-      JSModuleNamespace::EvaluateDeferredModule(
+      JSDeferredModuleNamespace::EvaluateDeferredModule(
                 it->isolate(), ns);
       RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
     }
@@ -1974,15 +1974,14 @@ Maybe<bool> JSReceiver::GetOwnPropertyDescriptor(LookupIterator* it,
                                              it->GetName(), desc);
   }
 
-  if (IsJSModuleNamespace(*it->GetReceiver())) {
+  if (IsJSDeferredModuleNamespace(*it->GetReceiver())) {
     DirectHandle<Name> name = it->GetName();
     Isolate* isolate = it->isolate();
-    DirectHandle<JSModuleNamespace> ns =
-        Cast<JSModuleNamespace>(it->GetReceiver());
-    if (ns->IsDeferred(isolate) &&
-        !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
+    DirectHandle<JSDeferredModuleNamespace> ns =
+        Cast<JSDeferredModuleNamespace>(it->GetReceiver());
+    if (!Name::Equals(isolate, name, isolate->factory()->then_string()) &&
         !IsSymbol(*name)) {
-      JSModuleNamespace::EvaluateDeferredModule(
+      JSDeferredModuleNamespace::EvaluateDeferredModule(
                 it->isolate(), ns);
       RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
     }
@@ -2654,6 +2653,8 @@ int JSObject::GetHeaderSize(InstanceType type,
       return JSIteratorFlatMapHelper::kHeaderSize;
     case JS_MODULE_NAMESPACE_TYPE:
       return JSModuleNamespace::kHeaderSize;
+    case JS_DEFERRED_MODULE_NAMESPACE_TYPE:
+      return JSDeferredModuleNamespace::kHeaderSize;
     case JS_SHARED_ARRAY_TYPE:
       return JSSharedArray::kHeaderSize;
     case JS_SHARED_STRUCT_TYPE:

@@ -24,6 +24,7 @@ namespace internal {
 
 TQ_OBJECT_CONSTRUCTORS_IMPL(Module)
 TQ_OBJECT_CONSTRUCTORS_IMPL(JSModuleNamespace)
+TQ_OBJECT_CONSTRUCTORS_IMPL(JSDeferredModuleNamespace)
 TQ_OBJECT_CONSTRUCTORS_IMPL(ScriptOrModule)
 
 BOOL_ACCESSORS(SourceTextModule, flags, has_toplevel_await,

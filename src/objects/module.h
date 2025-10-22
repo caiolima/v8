@@ -148,9 +148,6 @@ class JSModuleNamespace
   static V8_WARN_UNUSED_RESULT Maybe<PropertyAttributes> GetPropertyAttributes(
       LookupIterator* it);
 
-  static void EvaluateDeferredModule(
-      Isolate *isolate, DirectHandle<JSModuleNamespace> holder);
-
   static V8_WARN_UNUSED_RESULT Maybe<bool> DefineOwnProperty(
       Isolate* isolate, DirectHandle<JSModuleNamespace> o,
       DirectHandle<Object> key, PropertyDescriptor* desc,
@@ -168,6 +165,30 @@ class JSModuleNamespace
       kHeaderSize + (kTaggedSize * kInObjectFieldCount);
 
   TQ_OBJECT_CONSTRUCTORS(JSModuleNamespace)
+ private:
+};
+
+class JSDeferredModuleNamespace
+    : public TorqueGeneratedJSDeferredModuleNamespace<JSDeferredModuleNamespace,
+                                                      JSModuleNamespace> {
+ public:
+  DECL_PRINTER(JSDeferredModuleNamespace)
+
+  // In-object fields.
+  enum {
+    kToStringTagFieldIndex,
+    kInObjectFieldCount,
+  };
+
+  static void EvaluateDeferredModule(
+      Isolate *isolate, DirectHandle<JSDeferredModuleNamespace> holder);
+
+  // We need to include in-object fields
+  // TODO(v8:8944): improve handling of in-object fields
+  static constexpr int kSize =
+      kHeaderSize + (kTaggedSize * kInObjectFieldCount);
+
+  TQ_OBJECT_CONSTRUCTORS(JSDeferredModuleNamespace)
  private:
 };
 

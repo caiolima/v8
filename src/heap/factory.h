@@ -731,7 +731,9 @@ class V8_EXPORT_PRIVATE Factory : public FactoryBase<Factory> {
   DirectHandle<JSGeneratorObject> NewJSGeneratorObject(
       DirectHandle<JSFunction> function);
 
-  DirectHandle<JSModuleNamespace> NewJSModuleNamespace(ModuleImportPhase phase);
+  DirectHandle<JSModuleNamespace> NewJSModuleNamespace();
+
+  DirectHandle<JSDeferredModuleNamespace> NewJSDeferredModuleNamespace();
 
   DirectHandle<JSWrappedFunction> NewJSWrappedFunction(
       DirectHandle<NativeContext> creation_context,

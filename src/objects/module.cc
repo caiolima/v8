@@ -359,8 +359,9 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
 
   // Create the namespace object (initially empty).
   DirectHandle<JSModuleNamespace> ns =
-      isolate->factory()->NewJSModuleNamespace(phase);
-  PrintF("Map address: %lu\n", ns->map().ptr());
+      phase == ModuleImportPhase::kEvaluation
+          ? isolate->factory()->NewJSModuleNamespace()
+          : isolate->factory()->NewJSDeferredModuleNamespace();
   ns->set_module(*module);
   if (phase == ModuleImportPhase::kEvaluation) {
     module->set_module_namespace(*ns);
@@ -401,7 +402,6 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   DirectHandle<PrototypeInfo> proto_info =
       Map::GetOrCreatePrototypeInfo(ns, isolate);
   proto_info->set_module_namespace(*ns);
-  PrintF("Map address by the end: %lu\n", ns->map().ptr());
   return ns;
 }
 
@@ -411,7 +411,7 @@ bool JSModuleNamespace::HasExport(Isolate* isolate, DirectHandle<String> name) {
 }
 
 bool JSModuleNamespace::IsDeferred(Isolate* isolate) {
-  bool result = map() == isolate->native_context()->js_deferred_module_namespace_map();
+  bool result = IsJSDeferredModuleNamespace(*this);
   PrintF("deferred: %d\n", result);
   return result;
 }
@@ -461,8 +461,8 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
   return Just(it->property_attributes());
 }
 
-void JSModuleNamespace::EvaluateDeferredModule(
-    Isolate* isolate, DirectHandle<JSModuleNamespace> holder) {
+void JSDeferredModuleNamespace::EvaluateDeferredModule(
+    Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder) {
   Tagged<Module> module = holder->module();
 
   Zone zone(isolate->allocator(), ZONE_NAME);

@@ -22,6 +22,8 @@ extern class JSModuleNamespace extends JSSpecialObject {
   module: Module;
 }
 
+extern class JSDeferredModuleNamespace extends JSModuleNamespace {}
+
 extern class ScriptOrModule extends Struct {
   resource_name: Object;
   host_defined_options: FixedArray;

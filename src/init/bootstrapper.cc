@@ -4579,10 +4579,10 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
     }
   }
 
-  {  // -- D E F F E R E D J S M o d u l e N a m e s p a c e
+  {  // -- J S D e f e r r e d M o d u l e N a m e s p a c e
     DirectHandle<Map> map = factory->NewContextfulMapForCurrentContext(
-        JS_MODULE_NAMESPACE_TYPE, JSModuleNamespace::kSize,
-        TERMINAL_FAST_ELEMENTS_KIND, JSModuleNamespace::kInObjectFieldCount);
+        JS_DEFERRED_MODULE_NAMESPACE_TYPE, JSDeferredModuleNamespace::kSize,
+        TERMINAL_FAST_ELEMENTS_KIND, JSDeferredModuleNamespace::kInObjectFieldCount);
     map->SetConstructor(native_context()->object_function());
     Map::SetPrototype(isolate(), map, isolate_->factory()->null_value());
     Map::EnsureDescriptorSlack(isolate_, map, 1);
@@ -4593,7 +4593,7 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
           static_cast<PropertyAttributes>(DONT_DELETE | DONT_ENUM | READ_ONLY);
       Descriptor d =
           Descriptor::DataField(isolate(), factory->to_string_tag_symbol(),
-                                JSModuleNamespace::kToStringTagFieldIndex,
+                                JSDeferredModuleNamespace::kToStringTagFieldIndex,
                                 attribs, Representation::Tagged());
       map->AppendDescriptor(isolate(), &d);
     }

@@ -2751,6 +2751,12 @@ void JSModuleNamespace::JSModuleNamespacePrint(std::ostream& os) {
   JSObjectPrintBody(os, *this);
 }
 
+void JSDeferredModuleNamespace::JSDeferredModuleNamespacePrint(std::ostream& os) {
+  JSObjectPrintHeader(os, *this, "JSDeferredModuleNamespace");
+  os << "\n - deferred module: " << Brief(module());
+  JSObjectPrintBody(os, *this);
+}
+
 void PrototypeInfo::PrototypeInfoPrint(std::ostream& os) {
   PrintHeader(os, "PrototypeInfo");
   os << "\n - module namespace: " << Brief(module_namespace());

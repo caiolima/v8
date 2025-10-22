@@ -1042,15 +1042,13 @@ Maybe<bool> KeyAccumulator::CollectOwnPropertyNames(
 
   // TODO(caiolima): Is this also the right place to check for
   // OwnPropertyKeys?
-  if (IsJSModuleNamespace(*object)) {
+  if (IsJSDeferredModuleNamespace(*object)) {
     // Simulate [[GetOwnProperty]] for establishing enumerability, which
     // throws for uninitialized exports.
 
-    DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(object);
-    if (ns->IsDeferred(isolate_)) {
-      JSModuleNamespace::EvaluateDeferredModule(isolate_, ns);
-      RETURN_VALUE_IF_EXCEPTION(isolate_, Nothing<bool>());
-    }
+    DirectHandle<JSDeferredModuleNamespace> ns = Cast<JSDeferredModuleNamespace>(object);
+    JSDeferredModuleNamespace::EvaluateDeferredModule(isolate_, ns);
+    RETURN_VALUE_IF_EXCEPTION(isolate_, Nothing<bool>());
   }
 
   if (filter_ == ENUMERABLE_STRINGS) {

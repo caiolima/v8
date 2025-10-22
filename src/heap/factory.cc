@@ -3411,12 +3411,8 @@ Handle<JSWeakMap> Factory::NewJSWeakMap() {
   return weakmap;
 }
 
-DirectHandle<JSModuleNamespace> Factory::NewJSModuleNamespace(
-    ModuleImportPhase phase) {
-  PrintF("Creating new JSModuleNamespace with phase: %d\n", phase);
-  DirectHandle<Map> map = phase == ModuleImportPhase::kDefer
-                              ? isolate()->js_deferred_module_namespace_map()
-                              : isolate()->js_module_namespace_map();
+DirectHandle<JSModuleNamespace> Factory::NewJSModuleNamespace() {
+  DirectHandle<Map> map = isolate()->js_module_namespace_map();
   DirectHandle<JSModuleNamespace> module_namespace(
       Cast<JSModuleNamespace>(NewJSObjectFromMap(
           map, AllocationType::kYoung, DirectHandle<AllocationSite>::null(),
@@ -3427,6 +3423,20 @@ DirectHandle<JSModuleNamespace> Factory::NewJSModuleNamespace(
   module_namespace->FastPropertyAtPut(index, read_only_roots().Module_string(),
                                       SKIP_WRITE_BARRIER);
   return module_namespace;
+}
+
+DirectHandle<JSDeferredModuleNamespace> Factory::NewJSDeferredModuleNamespace() {
+  DirectHandle<Map> map = isolate()->js_deferred_module_namespace_map();
+  DirectHandle<JSDeferredModuleNamespace> deferred_namespace(
+      Cast<JSDeferredModuleNamespace>(NewJSObjectFromMap(
+          map, AllocationType::kYoung, DirectHandle<AllocationSite>::null(),
+          NewJSObjectType::kMaybeEmbedderFieldsAndApiWrapper)));
+  FieldIndex index = FieldIndex::ForDescriptor(
+      *map, InternalIndex(JSDeferredModuleNamespace::kToStringTagFieldIndex));
+  // FIXME(caiolima): add proper string here.
+  deferred_namespace->FastPropertyAtPut(index, read_only_roots().Module_string(),
+                                       SKIP_WRITE_BARRIER);
+  return deferred_namespace;
 }
 
 DirectHandle<JSWrappedFunction> Factory::NewJSWrappedFunction(
