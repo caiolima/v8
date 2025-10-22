@@ -410,12 +410,6 @@ bool JSModuleNamespace::HasExport(Isolate* isolate, DirectHandle<String> name) {
   return !IsTheHole(*object, isolate);
 }
 
-bool JSModuleNamespace::IsDeferred(Isolate* isolate) {
-  bool result = IsJSDeferredModuleNamespace(*this);
-  PrintF("deferred: %d\n", result);
-  return result;
-}
-
 MaybeDirectHandle<Object> JSModuleNamespace::GetExport(
     Isolate* isolate, DirectHandle<String> name) {
   DirectHandle<Object> object(module()->exports()->Lookup(name), isolate);

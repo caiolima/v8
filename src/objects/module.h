@@ -9,7 +9,6 @@
 #include "src/objects/js-objects.h"
 #include "src/objects/objects.h"
 #include "src/objects/struct.h"
-#include "torque-generated/bit-fields.h"
 
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
@@ -140,7 +139,6 @@ class JSModuleNamespace
       Isolate* isolate, DirectHandle<String> name);
 
   bool HasExport(Isolate* isolate, DirectHandle<String> name);
-  bool IsDeferred(Isolate* isolate);
 
   // Return the (constant) property attributes for the referenced property,
   // which is assumed to correspond to an export. If the export is
@@ -165,7 +163,6 @@ class JSModuleNamespace
       kHeaderSize + (kTaggedSize * kInObjectFieldCount);
 
   TQ_OBJECT_CONSTRUCTORS(JSModuleNamespace)
- private:
 };
 
 class JSDeferredModuleNamespace
@@ -189,7 +186,6 @@ class JSDeferredModuleNamespace
       kHeaderSize + (kTaggedSize * kInObjectFieldCount);
 
   TQ_OBJECT_CONSTRUCTORS(JSDeferredModuleNamespace)
- private:
 };
 
 class ScriptOrModule

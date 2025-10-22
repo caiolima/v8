@@ -202,7 +202,8 @@ class SourceTextModule
 
   static void GatherAsynchronousTransitiveDependencies(
       Isolate* isolate, Handle<Module> module,
-      ZoneVector<Handle<Module>>* result, UnorderedModuleSet* seen);
+      UnorderedModuleSet* evaluation_set,
+      ZoneVector<Handle<Module>>* evaluation_list, UnorderedModuleSet* seen);
 
   // Returns true if the evaluation exception was catchable by js, and false
   // for termination exceptions.

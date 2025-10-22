@@ -6716,7 +6716,7 @@ MaybeDirectHandle<JSPromise> Isolate::RunHostImportModuleDynamicallyCallback(
         return NewRejectedPromise(this, api_context, exception);
       }
       break;
-    default:
+    case ModuleImportPhase::kDefer:
       UNREACHABLE();
   }
 
@@ -6791,7 +6791,7 @@ MaybeDirectHandle<JSPromise> Isolate::RunHostImportModuleDynamicallyCallback(
               ToApiHandle<v8::FixedArray>(import_attributes_array)),
           MaybeDirectHandle<JSPromise>());
       break;
-    case ModuleImportPhase::kDefer:
+    default:
       UNREACHABLE();
   }
 

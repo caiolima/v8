@@ -3419,7 +3419,6 @@ DirectHandle<JSModuleNamespace> Factory::NewJSModuleNamespace() {
           NewJSObjectType::kMaybeEmbedderFieldsAndApiWrapper)));
   FieldIndex index = FieldIndex::ForDescriptor(
       *map, InternalIndex(JSModuleNamespace::kToStringTagFieldIndex));
-  // FIXME(caiolima): add proper string here.
   module_namespace->FastPropertyAtPut(index, read_only_roots().Module_string(),
                                       SKIP_WRITE_BARRIER);
   return module_namespace;

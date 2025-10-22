@@ -1247,9 +1247,12 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
   }
 
   Zone zone(isolate->allocator(), ZONE_NAME);
+  // There's an evaluation set to perform optimized check if a module is already
+  // in eveluation_list. It's encessary to keep evaluation order as it's seen to
+  // be spec compliant.
+  UnorderedModuleSet evaluation_set(&zone);
   ZoneVector<Handle<Module>> eveluation_list(&zone);
   UnorderedModuleSet seen_modules(&zone);
-
   for (int i = 0, length = requested_modules->length(); i < length; ++i) {
     DirectHandle<ModuleRequest> module_request(
         Cast<ModuleRequest>(module_requests->get(i)), isolate);
@@ -1261,20 +1264,11 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
     Handle<Module> requested_module(Cast<Module>(requested_modules->get(i)),
                                     isolate);
     if (module_request->phase() == ModuleImportPhase::kDefer) {
-      GatherAsynchronousTransitiveDependencies(isolate, requested_module, &eveluation_list, &seen_modules);
-    } else {
-      // FIXME(caiolima): ZoneVector doesn't have contains(), so we check manually.
-      // consider using ordered_set here.
-      bool already_in_result = false;
-      for (Handle<Module> existing : eveluation_list) {
-        if (*existing == *module) {
-          already_in_result = true;
-          break;
-        }
-      }
-      if (!already_in_result) {
-        eveluation_list.push_back(requested_module);
-      }
+      GatherAsynchronousTransitiveDependencies(isolate, requested_module,
+                                               &evaluation_set,
+                                               &eveluation_list, &seen_modules);
+    } else if (evaluation_set.insert(requested_module).second) {
+      eveluation_list.push_back(requested_module);
     }
   }
 
@@ -1400,10 +1394,11 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
 
 void SourceTextModule::GatherAsynchronousTransitiveDependencies(
     Isolate* isolate, Handle<Module> module,
-    ZoneVector<Handle<Module>>* result,
-    UnorderedModuleSet* seen) {
-  if (!seen->insert(module).second) {
-    return;  // Already visited this module
+    UnorderedModuleSet* evaluation_set,
+    ZoneVector<Handle<Module>>* evaluation_list,
+    UnorderedModuleSet* seen_set) {
+  if (!seen_set->insert(module).second) {
+    return;
   }
 
   if (!IsSourceTextModule(*module)) {
@@ -1411,31 +1406,22 @@ void SourceTextModule::GatherAsynchronousTransitiveDependencies(
   }
 
   Handle<SourceTextModule> source_text_module = Cast<SourceTextModule>(module);
-
-  if (source_text_module->status() == kEvaluating || module->status() == kEvaluatingAsync || module->status() == kEvaluated) {
+  if (source_text_module->status() == kEvaluating ||
+      module->status() == kEvaluatingAsync || module->status() == kEvaluated) {
     return;
   }
 
   if (source_text_module->has_toplevel_await()) {
-    // FIXME(caiolima): ZoneVector doesn't have contains(), so we check manually.
-    // consider using ordered_set here.
-    bool already_in_result = false;
-    for (Handle<Module> existing : *result) {
-      if (*existing == *source_text_module) {
-        already_in_result = true;
-        break;
-      }
-    }
-    if (!already_in_result) {
-      result->push_back(source_text_module);
+    if (evaluation_set->insert(source_text_module).second) {
+      evaluation_list->push_back(source_text_module);
     }
     return;
   }
 
-  // for (const required of module.RequestedModules) {
-  DirectHandle<FixedArray> module_requests(source_text_module->info()->module_requests(), isolate);
-  DirectHandle<FixedArray> requested_modules(source_text_module->requested_modules(), isolate);
-
+  DirectHandle<FixedArray> module_requests(
+      source_text_module->info()->module_requests(), isolate);
+  DirectHandle<FixedArray> requested_modules(
+      source_text_module->requested_modules(), isolate);
   for (int i = 0, length = requested_modules->length(); i < length; ++i) {
     DirectHandle<ModuleRequest> module_request(
         Cast<ModuleRequest>(module_requests->get(i)), isolate);
@@ -1445,11 +1431,11 @@ void SourceTextModule::GatherAsynchronousTransitiveDependencies(
       continue;
     }
 
-    Handle<Module> requested_module(Cast<Module>(requested_modules->get(i)), isolate);
+    Handle<Module> requested_module(Cast<Module>(requested_modules->get(i)),
+                                    isolate);
 
     GatherAsynchronousTransitiveDependencies(
-        isolate, Cast<SourceTextModule>(requested_module), result, seen);
-    // Note: SyntheticModules are not Cyclic Module Records, so we skip them
+        isolate, requested_module, evaluation_set, evaluation_list, seen_set);
   }
 }
 
