@@ -101,6 +101,7 @@ namespace v8::internal {
 Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
   for (;; it->Next()) {
     JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it);
+    RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
 
     switch (it->state()) {
       case LookupIterator::TRANSITION:
@@ -978,6 +979,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
 
   for (;; it->Next()) {
     JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it);
+    RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
 
     switch (it->state()) {
       case LookupIterator::DEFERRED_NAMESPACE_MODULE:
