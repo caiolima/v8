@@ -1233,12 +1233,12 @@ MaybeDirectHandle<Object> Object::GetLengthFromArrayLike(
 MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
                                         bool is_global_reference) {
   for (;; it->Next()) {
-    DirectHandle<JSReceiver> holder = it->CurrentHolder();
-    if (!holder.is_null() && IsJSDeferredModuleNamespace(*holder)) {
+    DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
+    if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
       DirectHandle<Name> name = it->GetName();
       Isolate* isolate = it->isolate();
       DirectHandle<JSDeferredModuleNamespace> ns =
-          Cast<JSDeferredModuleNamespace>(holder);
+          Cast<JSDeferredModuleNamespace>(maybe_holder);
       if (JSDeferredModuleNamespace::ShouldTriggerEvaluation(isolate, name)) {
         JSDeferredModuleNamespace::EvaluateDeferredModule(isolate, ns);
         RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());

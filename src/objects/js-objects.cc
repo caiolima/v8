@@ -100,12 +100,12 @@ namespace v8::internal {
 // static
 Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
   for (;; it->Next()) {
-    DirectHandle<JSReceiver> holder = it->CurrentHolder();
-    if (!holder.is_null() && IsJSDeferredModuleNamespace(*holder)) {
+    DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
+    if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
       DirectHandle<Name> name = it->GetName();
       Isolate* isolate = it->isolate();
       DirectHandle<JSDeferredModuleNamespace> ns =
-          Cast<JSDeferredModuleNamespace>(holder);
+          Cast<JSDeferredModuleNamespace>(maybe_holder);
       if (JSDeferredModuleNamespace::ShouldTriggerEvaluation(isolate, name)) {
         JSDeferredModuleNamespace::EvaluateDeferredModule(
                   it->isolate(), ns);
@@ -988,11 +988,11 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
   }
 
   for (;; it->Next()) {
-    DirectHandle<JSReceiver> holder = it->CurrentHolder();
-    if (IsJSDeferredModuleNamespace(*holder)) {
+    DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
+    if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
       DirectHandle<Name> name = it->GetName();
       DirectHandle<JSDeferredModuleNamespace> ns =
-          Cast<JSDeferredModuleNamespace>(holder);
+          Cast<JSDeferredModuleNamespace>(maybe_holder);
       if (JSDeferredModuleNamespace::ShouldTriggerEvaluation(isolate, name)) {
         JSDeferredModuleNamespace::EvaluateDeferredModule(
                   it->isolate(), ns);
@@ -1979,11 +1979,11 @@ Maybe<bool> JSReceiver::GetOwnPropertyDescriptor(LookupIterator* it,
                                              it->GetName(), desc);
   }
 
-  DirectHandle<JSReceiver> holder = it->CurrentHolder();
-  if (!holder.is_null() && IsJSDeferredModuleNamespace(*holder)) {
+  DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
+  if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
     DirectHandle<Name> name = it->GetName();
     DirectHandle<JSDeferredModuleNamespace> ns =
-        Cast<JSDeferredModuleNamespace>(it->GetReceiver());
+        Cast<JSDeferredModuleNamespace>(maybe_holder);
     if (JSDeferredModuleNamespace::ShouldTriggerEvaluation(isolate, name)) {
       JSDeferredModuleNamespace::EvaluateDeferredModule(
                 it->isolate(), ns);
