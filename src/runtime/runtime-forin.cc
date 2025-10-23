@@ -95,9 +95,6 @@ MaybeDirectHandle<Object> HasEnumerableProperty(
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         // TypedArray out-of-bounds access.
         return isolate->factory()->undefined_value();
-      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
-        // FIXME(caiolima): consider the case where the property is not in
-        // ExportList
       case LookupIterator::ACCESSOR: {
         if (IsJSModuleNamespace(*it.GetHolder<Object>())) {
           result = JSModuleNamespace::GetPropertyAttributes(&it);

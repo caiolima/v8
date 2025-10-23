@@ -99,9 +99,6 @@ class V8_EXPORT_PRIVATE LookupIterator final {
     DATA,
     // WasmGC objects are opaque in JS, and appear to have no properties.
     WASM_OBJECT,
-    // Access on deferred JSNamespaceObject can trigger a deferred evaluation
-    // of a module.
-    DEFERRED_NAMESPACE_MODULE,
 
     // A LookupIterator in the transition state is in the middle of performing
     // a data transition (that is, as part of a data property write, updating

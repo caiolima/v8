@@ -110,10 +110,6 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
       case LookupIterator::JSPROXY:
         return JSProxy::HasProperty(it->isolate(), it->GetHolder<JSProxy>(),
                                     it->GetName());
-      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
-        // FIXME(caiolima): the idea is to add a
-        // JSDeferredNamespace::HasProperty here.
-        return Just(true);
       case LookupIterator::WASM_OBJECT:
         continue;  // Continue to the prototype, if present.
       case LookupIterator::INTERCEPTOR: {
@@ -177,7 +173,6 @@ Handle<Object> JSReceiver::GetDataProperty(LookupIterator* it,
         // access to access-checked objects in that case.
         if (!it->isolate()->context().is_null() && it->HasAccess()) continue;
         [[fallthrough]];
-      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
       case LookupIterator::JSPROXY:
         it->NotFound();
         return it->isolate()->factory()->undefined_value();
@@ -243,8 +238,6 @@ Maybe<bool> JSReceiver::CheckPrivateNameStore(LookupIterator* it,
       case LookupIterator::JSPROXY:
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
       case LookupIterator::ACCESSOR:
-      // FIXME(caiolima): check if this is the case. There's a scenario where NOT_FOUND would execute here
-      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
       case LookupIterator::ACCESS_CHECK:
@@ -757,8 +750,6 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
-      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
-        return JSModuleNamespace::GetPropertyAttributes(it);
       case LookupIterator::JSPROXY:
         return JSProxy::GetPropertyAttributes(it);
       case LookupIterator::WASM_OBJECT:
@@ -982,7 +973,6 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
     RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
 
     switch (it->state()) {
-      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
       case LookupIterator::JSPROXY:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
@@ -1865,7 +1855,6 @@ Maybe<bool> JSReceiver::AddPrivateField(LookupIterator* it,
       break;
     }
 
-    case LookupIterator::DEFERRED_NAMESPACE_MODULE:
     case LookupIterator::TRANSITION:
     case LookupIterator::NOT_FOUND:
       break;
@@ -3847,9 +3836,6 @@ Maybe<bool> JSObject::DefineOwnPropertyIgnoreAttributes(
         return Just(true);
       }
 
-        // FIXME(caiolima): I don't know if this is the right logic for it. I
-        // need to cehck later.
-      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
       case LookupIterator::NOT_FOUND:
         return Object::AddDataProperty(it, value, attributes, should_throw,
                                        store_origin, semantics);

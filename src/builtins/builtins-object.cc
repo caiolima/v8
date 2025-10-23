@@ -170,8 +170,6 @@ Tagged<Object> ObjectLookupAccessor(Isolate* isolate,
         }
         continue;
       }
-      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
-        UNREACHABLE();
     }
     UNREACHABLE();
   }
