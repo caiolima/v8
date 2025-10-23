@@ -486,10 +486,20 @@ void JSDeferredModuleNamespace::EvaluateDeferredModule(
   }
 }
 
-bool JSDeferredModuleNamespace::ShouldTriggerEvaluation(
-    Isolate* isolate, DirectHandle<Name> name) {
-  return !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
-         !IsSymbol(*name);
+void JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(
+    LookupIterator* it) {
+  DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
+  if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
+    DirectHandle<Name> name = it->GetName();
+    Isolate* isolate = it->isolate();
+    DirectHandle<JSDeferredModuleNamespace> ns =
+        Cast<JSDeferredModuleNamespace>(maybe_holder);
+    if (!Name::Equals(isolate, name, isolate->factory()->then_string()) &&
+         !IsSymbol(*name)) {
+      JSDeferredModuleNamespace::EvaluateDeferredModule(
+                it->isolate(), ns);
+    }
+  }
 }
 
 // ES

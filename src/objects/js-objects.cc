@@ -100,18 +100,7 @@ namespace v8::internal {
 // static
 Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
   for (;; it->Next()) {
-    DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
-    if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
-      DirectHandle<Name> name = it->GetName();
-      Isolate* isolate = it->isolate();
-      DirectHandle<JSDeferredModuleNamespace> ns =
-          Cast<JSDeferredModuleNamespace>(maybe_holder);
-      if (JSDeferredModuleNamespace::ShouldTriggerEvaluation(isolate, name)) {
-        JSDeferredModuleNamespace::EvaluateDeferredModule(
-                  it->isolate(), ns);
-        RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-      }
-    }
+    JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it);
 
     switch (it->state()) {
       case LookupIterator::TRANSITION:
@@ -988,17 +977,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
   }
 
   for (;; it->Next()) {
-    DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
-    if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
-      DirectHandle<Name> name = it->GetName();
-      DirectHandle<JSDeferredModuleNamespace> ns =
-          Cast<JSDeferredModuleNamespace>(maybe_holder);
-      if (JSDeferredModuleNamespace::ShouldTriggerEvaluation(isolate, name)) {
-        JSDeferredModuleNamespace::EvaluateDeferredModule(
-                  it->isolate(), ns);
-        RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-      }
-    }
+    JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it);
 
     switch (it->state()) {
       case LookupIterator::DEFERRED_NAMESPACE_MODULE:
@@ -1979,17 +1958,8 @@ Maybe<bool> JSReceiver::GetOwnPropertyDescriptor(LookupIterator* it,
                                              it->GetName(), desc);
   }
 
-  DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
-  if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
-    DirectHandle<Name> name = it->GetName();
-    DirectHandle<JSDeferredModuleNamespace> ns =
-        Cast<JSDeferredModuleNamespace>(maybe_holder);
-    if (JSDeferredModuleNamespace::ShouldTriggerEvaluation(isolate, name)) {
-      JSDeferredModuleNamespace::EvaluateDeferredModule(
-                it->isolate(), ns);
-      RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-    }
-  }
+  JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it);
+  RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
 
   Maybe<bool> intercepted = GetPropertyDescriptorWithInterceptor(it, desc);
   MAYBE_RETURN(intercepted, Nothing<bool>());
