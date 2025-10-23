@@ -486,6 +486,12 @@ void JSDeferredModuleNamespace::EvaluateDeferredModule(
   }
 }
 
+bool JSDeferredModuleNamespace::ShouldTriggerEvaluation(
+    Isolate* isolate, DirectHandle<Name> name) {
+  return !Name::Equals(isolate, name, isolate->factory()->then_string()) &&
+         !IsSymbol(*name);
+}
+
 // ES
 // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-defineownproperty-p-desc
 // static

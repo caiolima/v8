@@ -178,7 +178,14 @@ class JSDeferredModuleNamespace
   };
 
   static void EvaluateDeferredModule(
-      Isolate *isolate, DirectHandle<JSDeferredModuleNamespace> holder);
+      Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder);
+
+  static bool ShouldTriggerEvaluation(Isolate* isolate,
+                                      DirectHandle<Name> name);
+
+  V8_WARN_UNUSED_RESULT static MaybeHandle<JSAny> GetProperty(
+      Isolate* isolate, DirectHandle<Name> name,
+      DirectHandle<JSDeferredModuleNamespace> ns, bool* was_found);
 
   // We need to include in-object fields
   // TODO(v8:8944): improve handling of in-object fields

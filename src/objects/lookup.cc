@@ -1314,9 +1314,9 @@ LookupIterator::State LookupIterator::LookupInSpecialHolder(
       if (IsJSProxyMap(map)) {
         if (is_element || !name_->IsPrivate()) return JSPROXY;
       }
-      if (IsJSDeferredModuleNamespaceMap(map)) {
-        if(!name_->IsPrivate()) return DEFERRED_NAMESPACE_MODULE;
-      }
+      // if (IsJSDeferredModuleNamespaceMap(map)) {
+      //   if(!name_->IsPrivate()) return DEFERRED_NAMESPACE_MODULE;
+      // }
 #if V8_ENABLE_WEBASSEMBLY
       if (IsWasmObjectMap(map)) return WASM_OBJECT;
 #endif  // V8_ENABLE_WEBASSEMBLY

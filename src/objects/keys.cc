@@ -1040,12 +1040,9 @@ ExceptionStatus CollectKeysFromDictionary(DirectHandle<Dictionary> dictionary,
 Maybe<bool> KeyAccumulator::CollectOwnPropertyNames(
     DirectHandle<JSReceiver> receiver, DirectHandle<JSObject> object) {
 
-  // TODO(caiolima): Is this also the right place to check for
+  // FIXME(caiolima): Is this also the right place to check for
   // OwnPropertyKeys?
   if (IsJSDeferredModuleNamespace(*object)) {
-    // Simulate [[GetOwnProperty]] for establishing enumerability, which
-    // throws for uninitialized exports.
-
     DirectHandle<JSDeferredModuleNamespace> ns = Cast<JSDeferredModuleNamespace>(object);
     JSDeferredModuleNamespace::EvaluateDeferredModule(isolate_, ns);
     RETURN_VALUE_IF_EXCEPTION(isolate_, Nothing<bool>());

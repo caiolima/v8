@@ -197,6 +197,8 @@ class V8_EXPORT_PRIVATE LookupIterator final {
   inline DirectHandle<PropertyCell> transition_cell() const;
   template <class T>
   inline DirectHandle<T> GetHolder() const;
+  DirectHandle<JSReceiver> CurrentHolder() const { return holder_; }
+
 
   DirectHandle<JSAny> lookup_start_object() const {
     return lookup_start_object_;
