@@ -252,6 +252,7 @@ RUNTIME_FUNCTION(Runtime_HasOwnConstDataProperty) {
       case LookupIterator::TRANSITION:
       case LookupIterator::ACCESS_CHECK:
       case LookupIterator::JSPROXY:
+      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
       case LookupIterator::WASM_OBJECT:
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
       case LookupIterator::ACCESSOR:

@@ -219,6 +219,7 @@ static void LookupForRead(LookupIterator* it, bool is_has_property) {
         // ICs know how to perform access checks on global proxies.
         if (!IsAccessCheckNeeded(*it->GetHolder<JSObject>())) continue;
         return;
+      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
       case LookupIterator::ACCESSOR:
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
       case LookupIterator::DATA:
@@ -911,6 +912,27 @@ MaybeObjectHandle LoadIC::ComputeHandler(LookupIterator* lookup) {
       TRACE_HANDLER_STATS(isolate(), LoadIC_LoadInterceptorFromPrototypeDH);
       return MaybeObjectHandle(
           LoadHandler::LoadFromPrototype(isolate(), map, holder, *smi_handler));
+    }
+
+    case LookupIterator::DEFERRED_NAMESPACE_MODULE: {
+      Handle<JSObject> holder =
+          indirect_handle(lookup->GetHolder<JSObject>(), isolate());
+      DCHECK(IsJSDeferredModuleNamespace(*holder));
+      DirectHandle<ObjectHashTable> exports(
+          Cast<JSDeferredModuleNamespace>(holder)->module()->exports(), isolate());
+      InternalIndex entry =
+          exports->FindEntry(isolate(), roots, lookup->name(),
+                              Smi::ToInt(Object::GetHash(*lookup->name())));
+      // We found the accessor, so the entry must exist.
+      DCHECK(entry.is_found());
+      int value_index = ObjectHashTable::EntryToValueIndex(entry);
+      Handle<Smi> smi_handler =
+          LoadHandler::LoadModuleExport(isolate(), value_index);
+      if (holder_is_lookup_start_object) {
+        return MaybeObjectHandle(smi_handler);
+      }
+      return MaybeObjectHandle(LoadHandler::LoadFromPrototype(
+          isolate(), map, holder, *smi_handler));
     }
 
     case LookupIterator::ACCESSOR: {
@@ -1648,6 +1670,10 @@ bool StoreIC::LookupForWrite(LookupIterator* it, DirectHandle<Object> value,
         continue;  // Continue to the prototype, if present.
       case LookupIterator::JSPROXY:
         return true;
+      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
+        // FIXME(caiolima): need to check here if there's a write that can
+        // happen to JSDeferredModuleNamespaces
+        return false;
       case LookupIterator::INTERCEPTOR: {
         DirectHandle<JSObject> holder = it->GetHolder<JSObject>();
         Tagged<InterceptorInfo> info = holder->GetNamedInterceptor();
@@ -1820,6 +1846,7 @@ Maybe<bool> DefineOwnDataProperty(LookupIterator* it,
     case LookupIterator::TRANSITION: {
       switch (original_state) {
         case LookupIterator::JSPROXY:
+        case LookupIterator::DEFERRED_NAMESPACE_MODULE:
         case LookupIterator::WASM_OBJECT:
         case LookupIterator::TRANSITION:
         case LookupIterator::DATA:
@@ -1838,6 +1865,7 @@ Maybe<bool> DefineOwnDataProperty(LookupIterator* it,
                                          EnforceDefineSemantics::kDefine);
       }
     }
+    case LookupIterator::DEFERRED_NAMESPACE_MODULE:
     case LookupIterator::ACCESS_CHECK:
     case LookupIterator::NOT_FOUND:
     case LookupIterator::DATA:
@@ -2258,6 +2286,13 @@ MaybeObjectHandle StoreIC::ComputeHandler(LookupIterator* lookup) {
 
       return MaybeObjectHandle(StoreHandler::StoreProxy(
           isolate(), lookup_start_object_map(), holder, receiver));
+    }
+    case LookupIterator::DEFERRED_NAMESPACE_MODULE: {
+      // FIXME(caiolima): check here if. it's always slow. Current
+      // JSNamespaceModule whill go through ACCSESSORS path and they probably
+      // goes to slow path since there's no setter for their accessor.
+      TRACE_HANDLER_STATS(isolate(), StoreIC_SlowStub);
+      return MaybeObjectHandle(StoreHandler::StoreSlow(isolate()));
     }
 
     case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
@@ -3895,6 +3930,7 @@ bool MaybeCanCloneObjectForObjectAssign(DirectHandle<JSReceiver> source,
       case LookupIterator::TRANSITION:
       case LookupIterator::ACCESS_CHECK:
       case LookupIterator::JSPROXY:
+      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
       case LookupIterator::WASM_OBJECT:
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
       case LookupIterator::ACCESSOR:

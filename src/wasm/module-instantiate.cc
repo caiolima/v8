@@ -1669,6 +1669,8 @@ MaybeDirectHandle<Object> InstanceBuilder::LookupImportAsm(
     case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
     case LookupIterator::INTERCEPTOR:
     case LookupIterator::JSPROXY:
+    // FIXME(caiolima): check here what could happen to DeferredModuleNamespace
+    case LookupIterator::DEFERRED_NAMESPACE_MODULE:
     case LookupIterator::WASM_OBJECT:
     case LookupIterator::ACCESSOR:
     case LookupIterator::TRANSITION:

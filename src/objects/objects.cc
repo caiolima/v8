@@ -1277,6 +1277,9 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
         if (!was_found && !is_global_reference) it->NotFound();
         return result;
       }
+      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
+        // FIXME: implement here JSDeferredNamespace::GetProperty.
+        UNREACHABLE();
       case LookupIterator::WASM_OBJECT:
         continue;  // Continue to the prototype, if present.
       case LookupIterator::INTERCEPTOR: {
@@ -2368,7 +2371,9 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
         }
         return Object::SetSuperProperty(it, value, store_origin, should_throw);
       }
-
+      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
+        // FIXME(caiolima): add here the logic wrinte in ModuleNamespaces
+        UNREACHABLE();
       case LookupIterator::ACCESSOR: {
         if (it->IsReadOnly()) {
           return WriteToReadOnlyProperty(it, value, should_throw);
@@ -2519,6 +2524,9 @@ Maybe<bool> Object::SetSuperProperty(LookupIterator* it,
         }
         continue;
 
+      case LookupIterator::DEFERRED_NAMESPACE_MODULE:
+        // FIXME(caiolima): add here logic for namespaces
+        UNREACHABLE();
       case LookupIterator::ACCESSOR:
         if (IsAccessorInfo(*own_lookup.GetAccessors())) {
           if (own_lookup.IsReadOnly()) {
