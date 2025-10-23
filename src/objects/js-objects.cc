@@ -991,7 +991,6 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
     DirectHandle<JSReceiver> holder = it->CurrentHolder();
     if (IsJSDeferredModuleNamespace(*holder)) {
       DirectHandle<Name> name = it->GetName();
-      Isolate* isolate = it->isolate();
       DirectHandle<JSDeferredModuleNamespace> ns =
           Cast<JSDeferredModuleNamespace>(holder);
       if (JSDeferredModuleNamespace::ShouldTriggerEvaluation(isolate, name)) {
@@ -1983,7 +1982,6 @@ Maybe<bool> JSReceiver::GetOwnPropertyDescriptor(LookupIterator* it,
   DirectHandle<JSReceiver> holder = it->CurrentHolder();
   if (!holder.is_null() && IsJSDeferredModuleNamespace(*holder)) {
     DirectHandle<Name> name = it->GetName();
-    Isolate* isolate = it->isolate();
     DirectHandle<JSDeferredModuleNamespace> ns =
         Cast<JSDeferredModuleNamespace>(it->GetReceiver());
     if (JSDeferredModuleNamespace::ShouldTriggerEvaluation(isolate, name)) {
