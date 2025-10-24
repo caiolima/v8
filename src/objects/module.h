@@ -179,7 +179,7 @@ class JSDeferredModuleNamespace
 
   static void EvaluateDeferredModule(
       Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder);
-  static void MaybeEvaluateDeferredModule(LookupIterator* it);
+  static bool MaybeEvaluateDeferredModule(LookupIterator* it);
 
   V8_WARN_UNUSED_RESULT static MaybeHandle<JSAny> GetProperty(
       Isolate* isolate, DirectHandle<Name> name,

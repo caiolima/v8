@@ -1233,8 +1233,9 @@ MaybeDirectHandle<Object> Object::GetLengthFromArrayLike(
 MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
                                         bool is_global_reference) {
   for (;; it->Next()) {
-    JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it);
-    RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+    if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+      RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+    }
 
     switch (it->state()) {
       case LookupIterator::TRANSITION:

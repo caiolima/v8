@@ -486,7 +486,7 @@ void JSDeferredModuleNamespace::EvaluateDeferredModule(
   }
 }
 
-void JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(
+bool JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(
     LookupIterator* it) {
   DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
   if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
@@ -496,10 +496,12 @@ void JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(
         Cast<JSDeferredModuleNamespace>(maybe_holder);
     if (!Name::Equals(isolate, name, isolate->factory()->then_string()) &&
          !IsSymbol(*name)) {
-      JSDeferredModuleNamespace::EvaluateDeferredModule(
-                it->isolate(), ns);
+      JSDeferredModuleNamespace::EvaluateDeferredModule(it->isolate(), ns);
+      return true;
     }
   }
+
+  return false;
 }
 
 // ES
