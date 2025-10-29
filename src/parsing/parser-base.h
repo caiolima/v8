@@ -4195,7 +4195,7 @@ ParserBase<Impl>::ParseImportExpressions() {
         CheckContextualKeyword(ast_value_factory()->source_string())) {
       phase = ModuleImportPhase::kSource;
     } else if (v8_flags.js_defer_import_eval &&
-               CheckContextualKeyword(ast_value_factory()->defer_string())) {
+               CheckContextualKeyword(ast_value_factory()->GetOneByteString("defer"))) {
       phase = ModuleImportPhase::kDefer;
     } else {
       ExpectContextualKeyword(ast_value_factory()->meta_string(), "import.meta",

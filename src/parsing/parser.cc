@@ -1621,7 +1621,7 @@ void Parser::ParseImportDeclaration() {
       Consume(Token::kIdentifier);
       import_phase = ModuleImportPhase::kSource;
     } else if (v8_flags.js_defer_import_eval &&
-               PeekContextualKeyword(ast_value_factory()->defer_string()) &&
+               PeekContextualKeyword(ast_value_factory()->GetOneByteString("defer")) &&
                PeekAhead() == Token::kMul &&
                PeekAheadAhead() == Token::kIdentifier) {
       Consume(Token::kIdentifier);
