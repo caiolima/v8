@@ -17,18 +17,17 @@ for (let i = 0; i < 100; i++) {
   } catch(e) {
     err1 = e;
   }
-  
+
   assertArrayEquals(['defer-throws-1'], globalThis.eval_list);
   assertEquals(err1.message, "deferred module eval exception");
-  
+
   let err2;
   try {
     'nonexistent' in ns;
   } catch(e) {
     err2 = e;
   }
-  
+
   assertArrayEquals(['defer-throws-1'], globalThis.eval_list);
   assertEquals(err1, err2);
 }
-
