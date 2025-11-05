@@ -1002,6 +1002,9 @@ void AccessorAssembler::HandleLoadICSmiHandlerLoadNamedCase(
         DecodeWordFromWord32<LoadHandler::ExportsIndexBits>(handler_word);
     TNode<Module> module =
         LoadObjectField<Module>(CAST(holder), JSModuleNamespace::kModuleOffset);
+    CSA_DCHECK(this,
+               SmiEqual(LoadObjectField<Smi>(module, Module::kStatusOffset),
+                        SmiConstant(Module::kEvaluated)));
     TNode<ObjectHashTable> exports =
         LoadObjectField<ObjectHashTable>(module, Module::kExportsOffset);
     TNode<Cell> cell = CAST(LoadFixedArrayElement(exports, index));
