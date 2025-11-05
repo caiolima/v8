@@ -1002,52 +1002,20 @@ void AccessorAssembler::HandleLoadICSmiHandlerLoadNamedCase(
         DecodeWordFromWord32<LoadHandler::ExportsIndexBits>(handler_word);
     TNode<Module> module =
         LoadObjectField<Module>(CAST(holder), JSModuleNamespace::kModuleOffset);
+    TNode<ObjectHashTable> exports =
+        LoadObjectField<ObjectHashTable>(module, Module::kExportsOffset);
+    TNode<Cell> cell = CAST(LoadFixedArrayElement(exports, index));
+    // The handler is only installed for exports that exist.
+    TNode<Object> value = LoadCellValue(cell);
+    Label is_the_hole(this, Label::kDeferred);
+    GotoIf(IsTheHole(value), &is_the_hole);
+    exit_point->Return(value);
 
-    Label is_deferred_namespace(this, Label::kDeferred);
-    Label fast_path(this);
-
-    // Check if holder is a JSDeferredModuleNamespace, to avoid skipping
-    // evaluation of deferred modules.
-    TNode<Uint16T> holder_instance_type =
-        LoadMapInstanceType(LoadMap(CAST(holder)));
-    GotoIf(InstanceTypeEqual(holder_instance_type,
-                             JS_DEFERRED_MODULE_NAMESPACE_TYPE),
-           &is_deferred_namespace);
-
-    Goto(&fast_path);
-
-    BIND(&fast_path);
+    BIND(&is_the_hole);
     {
-      TNode<ObjectHashTable> exports =
-          LoadObjectField<ObjectHashTable>(module, Module::kExportsOffset);
-      TNode<Cell> cell = CAST(LoadFixedArrayElement(exports, index));
-      // The handler is only installed for exports that exist.
-      TNode<Object> value = LoadCellValue(cell);
-      Label is_the_hole(this, Label::kDeferred);
-      GotoIf(IsTheHole(value), &is_the_hole);
-      exit_point->Return(value);
-
-      BIND(&is_the_hole);
-      {
-        TNode<Smi> message = SmiConstant(MessageTemplate::kNotDefined);
-        exit_point->ReturnCallRuntime(Runtime::kThrowReferenceError,
-                                      p->context(), message, p->name());
-      }
-    }
-
-    BIND(&is_deferred_namespace);
-    {
-      // For deferred modules, we fallback to slow path if the module is not
-      // evaluated yet, so it can trigger evaluation.
-      TNode<Int32T> module_status =
-          LoadObjectField<Int32T>(module, Module::kStatusOffset);
-      GotoIf(Word32Equal(module_status,
-                         Int32Constant(static_cast<int>(Module::kEvaluated))),
-             &fast_path);
-
-      exit_point->ReturnCallRuntime(Runtime::kGetProperty, p->context(),
-                                    p->lookup_start_object(), p->name(),
-                                    p->receiver());
+      TNode<Smi> message = SmiConstant(MessageTemplate::kNotDefined);
+      exit_point->ReturnCallRuntime(Runtime::kThrowReferenceError, p->context(),
+                                    message, p->name());
     }
   }
 
