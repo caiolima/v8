@@ -882,8 +882,14 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
           TRACE_HANDLER_STATS(isolate(), LoadIC_LoadNonexistentDH);
           handler = MaybeObjectHandle(LoadHandler::LoadNonExistent(
               isolate(), lookup_start_object_map()));
-        } else {
+        } else if (ns->module()->status() == Module::kErrored) {
+          // At this point it's known that this access needs to throw an error,
+          // so we install a slow path
           handler = MaybeObjectHandle(LoadHandler::LoadSlow(isolate()));
+        } else {
+          // The module was not evaluated yet, so we wait to properly update the
+          // cache later
+          return;
         }
       } else {
         TRACE_HANDLER_STATS(isolate(), LoadIC_LoadNonexistentDH);
@@ -911,6 +917,9 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
       }
     }
     handler = ComputeHandler(lookup);
+    if (handler.is_null()) {
+      return;
+    }
     CHECK(lookup->state() == LookupIterator::STRING_LOOKUP_START_OBJECT ||
           *lookup->GetHolder<Object>() == *(lookup->lookup_start_object()) ||
           LoadHandler::CanHandleHolderNotLookupStart(*handler.object()));
@@ -1022,13 +1031,22 @@ MaybeObjectHandle LoadIC::ComputeHandler(LookupIterator* lookup) {
         return MaybeObjectHandle(
             LoadHandler::LoadField(isolate(), field_index));
       }
-      if (IsJSModuleNamespace(*holder)) {
-        DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(holder);
-        if (ns->module()->status() != Module::kEvaluated) {
+      if (IsJSDeferredModuleNamespace(*holder)) {
+        DirectHandle<JSDeferredModuleNamespace> ns =
+            Cast<JSDeferredModuleNamespace>(holder);
+        if (ns->module()->status() == Module::kErrored) {
+          // At this point we already know that every access for this module
+          // should throw, so we install slow path.
           return MaybeObjectHandle(LoadHandler::LoadSlow(isolate()));
+        } else if (ns->module()->status() != Module::kEvaluated) {
+          // At this point the module was not evaluated yet, so let's try to
+          // cache on next access.
+          return MaybeObjectHandle();
         }
-        DirectHandle<ObjectHashTable> exports(ns->module()->exports(),
-                                              isolate());
+      }
+      if (IsJSModuleNamespace(*holder)) {
+        DirectHandle<ObjectHashTable> exports(
+            Cast<JSModuleNamespace>(holder)->module()->exports(), isolate());
         InternalIndex entry =
             exports->FindEntry(isolate(), roots, lookup->name(),
                                Smi::ToInt(Object::GetHash(*lookup->name())));
