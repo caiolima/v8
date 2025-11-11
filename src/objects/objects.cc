@@ -1271,6 +1271,7 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
         continue;  // Continue to the prototype, if present.
       case LookupIterator::INTERCEPTOR: {
         bool done;
+        PrintF("Executing Interceptor\n");
         Handle<JSAny> result;
         ASSIGN_RETURN_ON_EXCEPTION(
             it->isolate(), result,
@@ -1282,9 +1283,10 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
         if (it->HasAccess()) continue;
         return JSObject::GetPropertyWithFailedAccessCheck(it);
       case LookupIterator::ACCESSOR:
-        if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
-          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        }
+        // if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+        //   RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        // }
+        PrintF("Executing Accessor\n");
         return GetPropertyWithAccessor(it);
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return it->isolate()->factory()->undefined_value();
@@ -1293,9 +1295,10 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         return it->GetStringPropertyValue();
       case LookupIterator::NOT_FOUND:
-        if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
-          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        }
+        // if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
+        //   RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        // }
+        PrintF("Executing Not Found\n");
         if (it->IsPrivateName()) {
           auto private_symbol = Cast<Symbol>(it->name());
           DirectHandle<String> name_string(

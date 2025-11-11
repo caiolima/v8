@@ -6,6 +6,7 @@
 #define V8_OBJECTS_MODULE_H_
 
 #include "include/v8-script.h"
+#include "include/v8-template.h"
 #include "src/objects/js-objects.h"
 #include "src/objects/objects.h"
 #include "src/objects/struct.h"
@@ -181,6 +182,13 @@ class JSDeferredModuleNamespace
   static void EvaluateModuleSync(
       Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder);
   static bool MaybeEvaluateDeferredModule(LookupIterator* it);
+
+
+  // V8 Interceptor callback wrappers
+  static v8::Intercepted DeferredNamedPropertyGetterCallback(
+      v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& info);
+  static v8::Intercepted DeferredNamedPropertyQueryCallback(
+      v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Integer>& info);
 
   // We need to include in-object fields
   // TODO(v8:8944): improve handling of in-object fields

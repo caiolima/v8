@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "include/v8-template.h"
 #include "src/api/api-inl.h"
 #include "src/ast/modules.h"
 #include "src/builtins/accessors.h"
@@ -364,39 +365,39 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   ns->set_module(*module);
   if (phase == ModuleImportPhase::kEvaluation) {
     module->set_module_namespace(*ns);
+
+    // Create the properties in the namespace object. Transition the object
+    // to dictionary mode so that property addition is faster.
+    PropertyAttributes attr = DONT_DELETE;
+    JSObject::NormalizeProperties(isolate, ns, CLEAR_INOBJECT_PROPERTIES,
+                                  static_cast<int>(names.size()),
+                                  "JSModuleNamespace");
+    JSObject::NormalizeElements(isolate, ns);
+    for (const auto& name : names) {
+      uint32_t index = 0;
+      if (name->AsArrayIndex(&index)) {
+        JSObject::SetNormalizedElement(
+            ns, index, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
+            PropertyDetails(PropertyKind::kAccessor, attr,
+                            PropertyCellType::kMutable));
+      } else {
+        JSObject::SetNormalizedProperty(
+            ns, name, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
+            PropertyDetails(PropertyKind::kAccessor, attr,
+                            PropertyCellType::kMutable));
+      }
+    }
+    JSObject::PreventExtensions(isolate, ns, kThrowOnError).ToChecked();
+
+    // Optimize the namespace object as a prototype, for two reasons:
+    // - The object's map is guaranteed not to be shared. ICs rely on this.
+    // - We can store a pointer from the map back to the namespace object.
+    //   Turbofan can use this for inlining the access.
+    JSObject::OptimizeAsPrototype(ns);
   } else {
     DCHECK(phase == ModuleImportPhase::kDefer);
     module->set_deferred_module_namespace(*ns);
   }
-
-  // Create the properties in the namespace object. Transition the object
-  // to dictionary mode so that property addition is faster.
-  PropertyAttributes attr = DONT_DELETE;
-  JSObject::NormalizeProperties(isolate, ns, CLEAR_INOBJECT_PROPERTIES,
-                                static_cast<int>(names.size()),
-                                "JSModuleNamespace");
-  JSObject::NormalizeElements(isolate, ns);
-  for (const auto& name : names) {
-    uint32_t index = 0;
-    if (name->AsArrayIndex(&index)) {
-      JSObject::SetNormalizedElement(
-          ns, index, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
-          PropertyDetails(PropertyKind::kAccessor, attr,
-                          PropertyCellType::kMutable));
-    } else {
-      JSObject::SetNormalizedProperty(
-          ns, name, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
-          PropertyDetails(PropertyKind::kAccessor, attr,
-                          PropertyCellType::kMutable));
-    }
-  }
-  JSObject::PreventExtensions(isolate, ns, kThrowOnError).ToChecked();
-
-  // Optimize the namespace object as a prototype, for two reasons:
-  // - The object's map is guaranteed not to be shared. ICs rely on this.
-  // - We can store a pointer from the map back to the namespace object.
-  //   Turbofan can use this for inlining the access.
-  JSObject::OptimizeAsPrototype(ns);
 
   DirectHandle<PrototypeInfo> proto_info =
       Map::GetOrCreatePrototypeInfo(ns, isolate);
@@ -592,6 +593,33 @@ bool Module::IsGraphAsync(Isolate* isolate) const {
   } while (!worklist.empty());
 
   return false;
+}
+
+// V8 Interceptor callback wrappers
+v8::Intercepted JSDeferredModuleNamespace::DeferredNamedPropertyGetterCallback(
+    v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& info) {
+  PrintF("DeferredNamedPropertyGetterCallback called\n");
+
+
+  // TODO(claude): here I need to implement the following logic:
+  // - First it's going to apply a transition to a map that doesn't have named
+  // interceptors, using a copy from original map.
+  // - Then it will install all exported names, as we are fdoing in
+  // GetModuleNamespace. It's a good idea to refacotr what's in the L368-L396 so
+  // it can be resued there and here.
+  // - It will then trigger the deferred evaluation of the module, like we have
+  // on MaybeEvaluateDeferredModule. Now we already have holder
+  // (info.HolderV2()) and property as name.
+  // - After that we need to get the value like we do on
+  // ModuleNamespaceEntryGetter. We can use GetExport here as well.
+  return v8::Intercepted::kYes;
+}
+
+v8::Intercepted JSDeferredModuleNamespace::DeferredNamedPropertyQueryCallback(
+    v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Integer>& info) {
+  DCHECK(info.GetIsolate());
+  PrintF("DeferredNamedPropertyQueryCallback called\n");
+  return v8::Intercepted::kYes;
 }
 
 }  // namespace internal

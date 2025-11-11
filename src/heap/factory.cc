@@ -3471,6 +3471,20 @@ Factory::NewJSDeferredModuleNamespace() {
       *map, InternalIndex(JSDeferredModuleNamespace::kToStringTagFieldIndex));
   deferred_namespace->FastPropertyAtPut(
       index, read_only_roots().Deferred_Module_string(), SKIP_WRITE_BARRIER);
+
+  // create interceptor info
+  DirectHandle<InterceptorInfo> deferred_interceptor_info = NewInterceptorInfo();
+  deferred_interceptor_info->set_data(ReadOnlyRoots(isolate()).undefined_value());
+  deferred_interceptor_info->set_flags(InterceptorInfo::Flags(
+      InterceptorInfo::kNamed | InterceptorInfo::kHasNoSideEffect));
+  deferred_interceptor_info->set_named_getter(
+      isolate(), reinterpret_cast<Address>(
+          JSDeferredModuleNamespace::DeferredNamedPropertyGetterCallback));
+  deferred_interceptor_info->set_named_query(
+      isolate(), reinterpret_cast<Address>(
+          JSDeferredModuleNamespace::DeferredNamedPropertyQueryCallback));
+
+  deferred_namespace->set_interceptor_info(*deferred_interceptor_info);
   return deferred_namespace;
 }
 

@@ -995,5 +995,68 @@ RUNTIME_FUNCTION(Runtime_ProfileCreateSnapshotDataBlob) {
   return ReadOnlyRoots(isolate).undefined_value();
 }
 
+namespace {
+
+void NamedInterceptorGetter(v8::Local<v8::Name> property,
+                               const v8::PropertyCallbackInfo<v8::Value>& info) {
+  PrintF("hello\n");
+  DirectHandle<JSReceiver> obj = Utils::OpenDirectHandle(*info.HolderV2());
+  Isolate* isolate = reinterpret_cast<Isolate*>(info.GetIsolate());
+  obj->set_map(isolate, *isolate->factory()->ObjectLiteralMapFromCache(isolate->native_context(), 0));
+  info.GetReturnValue().Set(v8::Integer::New(info.GetIsolate(), 42));
+}
+
+MaybeHandle<JSObject> CreateObjectFromTemplate(Isolate* isolate,
+                                               DirectHandle<ObjectTemplateInfo> object_template_info) {
+    Factory* factory = isolate->factory();
+    DirectHandle<FunctionTemplateInfo> constructor_template(
+        Cast<FunctionTemplateInfo>(object_template_info->constructor()), isolate);
+    DirectHandle<SharedFunctionInfo> shared =
+        FunctionTemplateInfo::GetOrCreateSharedFunctionInfo(isolate, constructor_template,
+                                                            MaybeDirectHandle<Name>());
+    Handle<JSFunction> constructor =
+        Factory::JSFunctionBuilder{isolate, shared, isolate->native_context()}.Build();
+    InstanceType instance_type = JS_SPECIAL_API_OBJECT_TYPE;
+    int instance_size = JSObject::GetHeaderSize(instance_type);
+
+    DirectHandle<Map> instance_map = factory->NewContextfulMap(
+        isolate->native_context(), instance_type, instance_size);
+
+    instance_map->set_has_named_interceptor(true);
+    instance_map->set_may_have_interesting_properties(true);
+
+    Handle<JSObject> prototype = factory->NewJSObject(isolate->object_function());
+    JSFunction::SetInitialMap(isolate, constructor, instance_map, prototype);
+
+    Handle<JSObject> obj = factory->NewJSObjectFromMap(instance_map, AllocationType::kYoung, DirectHandle<AllocationSite>(), NewJSObjectType::kMaybeEmbedderFieldsAndApiWrapper);
+
+    return obj;
+}
+
+}  // namespace
+
+RUNTIME_FUNCTION(Runtime_CreateObjectWithNamedInterceptor) {
+  HandleScope scope(isolate);
+  Factory* factory = isolate->factory();
+
+  DirectHandle<FunctionTemplateInfo> function_template_info =
+      factory->NewFunctionTemplateInfo(0, false);
+
+  DirectHandle<InterceptorInfo> interceptor_info = factory->NewInterceptorInfo();
+  interceptor_info->set_is_named(true);
+  interceptor_info->set_named_getter(
+      isolate, reinterpret_cast<i::Address>(NamedInterceptorGetter));
+
+  FunctionTemplateInfo::SetNamedPropertyHandler(isolate, function_template_info, interceptor_info);
+
+  DirectHandle<ObjectTemplateInfo> object_template_info =
+      factory->NewObjectTemplateInfo(function_template_info, false);
+
+  Handle<JSObject> obj =
+      CreateObjectFromTemplate(isolate, object_template_info).ToHandleChecked();
+
+  return *obj;
+}
+
 }  // namespace internal
 }  // namespace v8

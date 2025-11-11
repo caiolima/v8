@@ -4564,11 +4564,25 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
   }
 
   {  // -- J S D e f e r r e d M o d u l e N a m e s p a c e
+    // Create InterceptorInfo for deferred module namespaces
+    // DirectHandle<InterceptorInfo> deferred_interceptor_info = factory->NewInterceptorInfo();
+    // deferred_interceptor_info->set_data(ReadOnlyRoots(isolate_).undefined_value());
+    // deferred_interceptor_info->set_flags(InterceptorInfo::Flags(
+    //     InterceptorInfo::kNamed | InterceptorInfo::kHasNoSideEffect));
+    // deferred_interceptor_info->set_named_getter(
+    //     isolate_, reinterpret_cast<Address>(
+    //         JSDeferredModuleNamespace::DeferredNamedPropertyGetterCallback));
+    // deferred_interceptor_info->set_named_query(
+    //     isolate_, reinterpret_cast<Address>(
+    //         JSDeferredModuleNamespace::DeferredNamedPropertyQueryCallback));
+
     DirectHandle<Map> map = factory->NewContextfulMapForCurrentContext(
         JS_DEFERRED_MODULE_NAMESPACE_TYPE, JSDeferredModuleNamespace::kSize,
         TERMINAL_FAST_ELEMENTS_KIND,
         JSDeferredModuleNamespace::kInObjectFieldCount);
     map->SetConstructor(native_context()->object_function());
+    map->set_has_named_interceptor(true);
+    map->set_may_have_interesting_properties(true);
     Map::SetPrototype(isolate(), map, isolate_->factory()->null_value());
     Map::EnsureDescriptorSlack(isolate_, map, 1);
     native_context()->set_js_deferred_module_namespace_map(*map);
