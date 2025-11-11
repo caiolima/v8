@@ -189,6 +189,12 @@ class JSDeferredModuleNamespace
       v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& info);
   static v8::Intercepted DeferredNamedPropertyQueryCallback(
       v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Integer>& info);
+  static v8::Intercepted DeferredIndexedPropertyGetterCallback(
+      uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info);
+  static v8::Intercepted DeferredNamedPropertyDeleterCallback(
+      v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Boolean>& info);
+  static v8::Intercepted DeferredIndexedPropertyDeleterCallback(
+      uint32_t index, const v8::PropertyCallbackInfo<v8::Boolean>& info);
 
   // We need to include in-object fields
   // TODO(v8:8944): improve handling of in-object fields

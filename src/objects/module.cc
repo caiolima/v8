@@ -317,32 +317,17 @@ MaybeDirectHandle<Object> Module::Evaluate(Isolate* isolate,
   }
 }
 
-DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
-    Isolate* isolate, Handle<Module> module, ModuleImportPhase phase) {
-  DCHECK(phase == ModuleImportPhase::kEvaluation ||
-         phase == ModuleImportPhase::kDefer);
-  Tagged<HeapObject> module_ns = phase == ModuleImportPhase::kEvaluation
-                                     ? module->module_namespace()
-                                     : module->deferred_module_namespace();
-  DirectHandle<HeapObject> object(module_ns, isolate);
-  ReadOnlyRoots roots(isolate);
-  if (!IsUndefined(*object, roots)) {
-    // Namespace object already exists.
-    return Cast<JSModuleNamespace>(object);
-  }
-
+// FIXME(caiolima): review this
+// Helper function to install exported names as properties on a module namespace
+void InstallModuleNamespaceProperties(Isolate* isolate,
+                                      DirectHandle<JSModuleNamespace> ns,
+                                      Handle<Module> module) {
   // Collect the export names.
   Zone zone(isolate->allocator(), ZONE_NAME);
-  UnorderedModuleSet visited(&zone);
-
-  if (IsSourceTextModule(*module)) {
-    SourceTextModule::FetchStarExports(isolate, Cast<SourceTextModule>(module),
-                                       &zone, &visited);
-  }
-
   DirectHandle<ObjectHashTable> exports(module->exports(), isolate);
   ZoneVector<IndirectHandle<String>> names(&zone);
   names.reserve(exports->NumberOfElements());
+  ReadOnlyRoots roots(isolate);
   for (InternalIndex i : exports->IterateEntries()) {
     Tagged<Object> key;
     if (!exports->ToKey(roots, i, &key)) continue;
@@ -357,6 +342,58 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
                      ComparisonResult::kLessThan;
             });
 
+  // Create the properties in the namespace object. Transition the object
+  // to dictionary mode so that property addition is faster.
+  PropertyAttributes attr = DONT_DELETE;
+  JSObject::NormalizeProperties(isolate, ns, CLEAR_INOBJECT_PROPERTIES,
+                                static_cast<int>(names.size()),
+                                "JSModuleNamespace");
+  JSObject::NormalizeElements(isolate, ns);
+  for (const auto& name : names) {
+    uint32_t index = 0;
+    if (name->AsArrayIndex(&index)) {
+      JSObject::SetNormalizedElement(
+          ns, index, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
+          PropertyDetails(PropertyKind::kAccessor, attr,
+                          PropertyCellType::kMutable));
+    } else {
+      JSObject::SetNormalizedProperty(
+          ns, name, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
+          PropertyDetails(PropertyKind::kAccessor, attr,
+                          PropertyCellType::kMutable));
+    }
+  }
+  JSObject::PreventExtensions(isolate, ns, kThrowOnError).ToChecked();
+
+  // Optimize the namespace object as a prototype, for two reasons:
+  // - The object's map is guaranteed not to be shared. ICs rely on this.
+  // - We can store a pointer from the map back to the namespace object.
+  //   Turbofan can use this for inlining the access.
+  JSObject::OptimizeAsPrototype(ns);
+}
+
+DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
+    Isolate* isolate, Handle<Module> module, ModuleImportPhase phase) {
+  DCHECK(phase == ModuleImportPhase::kEvaluation ||
+         phase == ModuleImportPhase::kDefer);
+  Tagged<HeapObject> module_ns = phase == ModuleImportPhase::kEvaluation
+                                     ? module->module_namespace()
+                                     : module->deferred_module_namespace();
+  DirectHandle<HeapObject> object(module_ns, isolate);
+  ReadOnlyRoots roots(isolate);
+  if (!IsUndefined(*object, roots)) {
+    // Namespace object already exists.
+    return Cast<JSModuleNamespace>(object);
+  }
+
+  Zone zone(isolate->allocator(), ZONE_NAME);
+  UnorderedModuleSet visited(&zone);
+
+  if (IsSourceTextModule(*module)) {
+    SourceTextModule::FetchStarExports(isolate, Cast<SourceTextModule>(module),
+                                       &zone, &visited);
+  }
+
   // Create the namespace object (initially empty).
   DirectHandle<JSModuleNamespace> ns =
       phase == ModuleImportPhase::kEvaluation
@@ -365,38 +402,11 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   ns->set_module(*module);
   if (phase == ModuleImportPhase::kEvaluation) {
     module->set_module_namespace(*ns);
-
-    // Create the properties in the namespace object. Transition the object
-    // to dictionary mode so that property addition is faster.
-    PropertyAttributes attr = DONT_DELETE;
-    JSObject::NormalizeProperties(isolate, ns, CLEAR_INOBJECT_PROPERTIES,
-                                  static_cast<int>(names.size()),
-                                  "JSModuleNamespace");
-    JSObject::NormalizeElements(isolate, ns);
-    for (const auto& name : names) {
-      uint32_t index = 0;
-      if (name->AsArrayIndex(&index)) {
-        JSObject::SetNormalizedElement(
-            ns, index, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
-            PropertyDetails(PropertyKind::kAccessor, attr,
-                            PropertyCellType::kMutable));
-      } else {
-        JSObject::SetNormalizedProperty(
-            ns, name, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
-            PropertyDetails(PropertyKind::kAccessor, attr,
-                            PropertyCellType::kMutable));
-      }
-    }
-    JSObject::PreventExtensions(isolate, ns, kThrowOnError).ToChecked();
-
-    // Optimize the namespace object as a prototype, for two reasons:
-    // - The object's map is guaranteed not to be shared. ICs rely on this.
-    // - We can store a pointer from the map back to the namespace object.
-    //   Turbofan can use this for inlining the access.
-    JSObject::OptimizeAsPrototype(ns);
+    InstallModuleNamespaceProperties(isolate, ns, module);
   } else {
     DCHECK(phase == ModuleImportPhase::kDefer);
     module->set_deferred_module_namespace(*ns);
+    JSObject::OptimizeAsPrototype(ns);
   }
 
   DirectHandle<PrototypeInfo> proto_info =
@@ -598,20 +608,48 @@ bool Module::IsGraphAsync(Isolate* isolate) const {
 // V8 Interceptor callback wrappers
 v8::Intercepted JSDeferredModuleNamespace::DeferredNamedPropertyGetterCallback(
     v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& info) {
-  PrintF("DeferredNamedPropertyGetterCallback called\n");
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  HandleScope scope(isolate);
 
+  // Get the deferred module namespace holder
+  DirectHandle<JSDeferredModuleNamespace> deferred_holder =
+      Cast<JSDeferredModuleNamespace>(
+          Utils::OpenDirectHandle(*info.HolderV2()));
 
-  // TODO(claude): here I need to implement the following logic:
-  // - First it's going to apply a transition to a map that doesn't have named
-  // interceptors, using a copy from original map.
-  // - Then it will install all exported names, as we are fdoing in
-  // GetModuleNamespace. It's a good idea to refacotr what's in the L368-L396 so
-  // it can be resued there and here.
-  // - It will then trigger the deferred evaluation of the module, like we have
-  // on MaybeEvaluateDeferredModule. Now we already have holder
-  // (info.HolderV2()) and property as name.
-  // - After that we need to get the value like we do on
-  // ModuleNamespaceEntryGetter. We can use GetExport here as well.
+  Handle<Module> module = handle(deferred_holder->module(), isolate);
+
+  DirectHandle<String> name = Cast<String>(Utils::OpenDirectHandle(*property));
+  if (Name::Equals(isolate, name, isolate->factory()->then_string()) ||
+      IsSymbol(*name)) {
+    return v8::Intercepted::kNo;
+  }
+
+  JSDeferredModuleNamespace::EvaluateModuleSync(isolate, deferred_holder);
+
+  // Check for exceptions after evaluation
+  if (isolate->has_exception()) {
+    return v8::Intercepted::kYes;
+  }
+
+  // 1. Create a copy of the current map without named interceptors
+  DirectHandle<Map> current_map = handle(deferred_holder->map(), isolate);
+  DirectHandle<Map> new_map = Map::Copy(isolate, current_map, "RemoveNamedInterceptors");
+  new_map->set_has_named_interceptor(false);
+  new_map->set_has_indexed_interceptor(false);
+
+  // Apply the new map to remove interceptors
+  JSObject::MigrateToMap(isolate, deferred_holder, new_map);
+
+  // Cast to regular JSModuleNamespace after map transition
+  DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(deferred_holder);
+  InstallModuleNamespaceProperties(isolate, ns, module);
+
+  // 4. Get the property value using GetExport pattern
+  DirectHandle<Object> result;
+  if (ns->GetExport(isolate, name).ToHandle(&result)) {
+    info.GetReturnValue().Set(Utils::ToLocal(result));
+  }
+
   return v8::Intercepted::kYes;
 }
 
@@ -620,6 +658,75 @@ v8::Intercepted JSDeferredModuleNamespace::DeferredNamedPropertyQueryCallback(
   DCHECK(info.GetIsolate());
   PrintF("DeferredNamedPropertyQueryCallback called\n");
   return v8::Intercepted::kYes;
+}
+
+v8::Intercepted
+JSDeferredModuleNamespace::DeferredIndexedPropertyGetterCallback(
+    uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info) {
+  // Convert index to a v8::Local<v8::Name> using internal factory
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  DirectHandle<String> index_string = isolate->factory()->Uint32ToString(index);
+  v8::Local<v8::Name> property = Utils::ToLocal(index_string).As<v8::Name>();
+
+  // Reuse the named property getter callback
+  return DeferredNamedPropertyGetterCallback(property, info);
+}
+
+v8::Intercepted JSDeferredModuleNamespace::DeferredNamedPropertyDeleterCallback(
+    v8::Local<v8::Name> property,
+    const v8::PropertyCallbackInfo<v8::Boolean>& info) {
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  HandleScope scope(isolate);
+
+  // Get the deferred module namespace holder
+  DirectHandle<JSDeferredModuleNamespace> deferred_holder =
+      Cast<JSDeferredModuleNamespace>(Utils::OpenDirectHandle(*info.HolderV2()));
+
+  Handle<Module> module = handle(deferred_holder->module(), isolate);
+
+  // Skip evaluation for special properties like 'then' (to avoid thenable behavior)
+  DirectHandle<String> name = Cast<String>(Utils::OpenDirectHandle(*property));
+  if (Name::Equals(isolate, name, isolate->factory()->then_string()) ||
+      IsSymbol(*name)) {
+    return v8::Intercepted::kNo;
+  }
+
+  // Trigger deferred module evaluation
+  JSDeferredModuleNamespace::EvaluateModuleSync(isolate, deferred_holder);
+
+  // Check for exceptions after evaluation
+  if (isolate->has_exception()) {
+    return v8::Intercepted::kYes;
+  }
+
+  // Create a copy of the current map without named interceptors
+  DirectHandle<Map> current_map = handle(deferred_holder->map(), isolate);
+  DirectHandle<Map> new_map =
+      Map::Copy(isolate, current_map, "RemoveNamedInterceptors");
+  new_map->set_has_named_interceptor(false);
+  new_map->set_has_indexed_interceptor(false);
+
+  // Apply the new map to remove interceptors
+  JSObject::MigrateToMap(isolate, deferred_holder, new_map);
+
+  // Cast to regular JSModuleNamespace after map transition
+  DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(deferred_holder);
+  InstallModuleNamespaceProperties(isolate, ns, module);
+
+  // Module namespace properties are non-configurable, so deletion always fails
+  info.GetReturnValue().Set(false);
+  return v8::Intercepted::kYes;
+}
+
+v8::Intercepted JSDeferredModuleNamespace::DeferredIndexedPropertyDeleterCallback(
+    uint32_t index, const v8::PropertyCallbackInfo<v8::Boolean>& info) {
+  // Convert index to a v8::Local<v8::Name> using internal factory
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  DirectHandle<String> index_string = isolate->factory()->Uint32ToString(index);
+  v8::Local<v8::Name> property = Utils::ToLocal(index_string).As<v8::Name>();
+
+  // Reuse the named property deleter callback
+  return DeferredNamedPropertyDeleterCallback(property, info);
 }
 
 }  // namespace internal

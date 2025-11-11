@@ -4582,6 +4582,7 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
         JSDeferredModuleNamespace::kInObjectFieldCount);
     map->SetConstructor(native_context()->object_function());
     map->set_has_named_interceptor(true);
+    map->set_has_indexed_interceptor(true);
     map->set_may_have_interesting_properties(true);
     Map::SetPrototype(isolate(), map, isolate_->factory()->null_value());
     Map::EnsureDescriptorSlack(isolate_, map, 1);

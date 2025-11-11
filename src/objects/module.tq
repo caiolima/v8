@@ -23,7 +23,8 @@ extern class JSModuleNamespace extends JSSpecialObject {
 }
 
 extern class JSDeferredModuleNamespace extends JSModuleNamespace {
-  interceptor_info: InterceptorInfo;
+  named_interceptor_info: InterceptorInfo;
+  indexed_interceptor_info: InterceptorInfo;
 }
 
 @cppObjectLayoutDefinition
