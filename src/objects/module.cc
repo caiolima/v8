@@ -406,6 +406,14 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   } else {
     DCHECK(phase == ModuleImportPhase::kDefer);
     module->set_deferred_module_namespace(*ns);
+    // FIXME(caiolima): mark this object as non-extensible. Evaluate if we could
+    // create the map already as non-extensible.
+    DirectHandle<Map> new_map = Map::Copy(
+        isolate, direct_handle(ns->map(), isolate), "PreventExtensions");
+
+    new_map->set_is_extensible(false);
+    JSObject::MigrateToMap(isolate, ns, new_map);
+
     JSObject::OptimizeAsPrototype(ns);
   }
 
@@ -504,22 +512,45 @@ void JSDeferredModuleNamespace::EvaluateModuleSync(
   DCHECK_EQ(promise->status(), Promise::kFulfilled);
 }
 
-bool JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(
-    LookupIterator* it) {
-  DirectHandle<JSReceiver> maybe_holder = it->CurrentHolder();
-  if (!maybe_holder.is_null() && IsJSDeferredModuleNamespace(*maybe_holder)) {
-    DirectHandle<Name> name = it->GetName();
-    Isolate* isolate = it->isolate();
-    DirectHandle<JSDeferredModuleNamespace> ns =
-        Cast<JSDeferredModuleNamespace>(maybe_holder);
-    if (!Name::Equals(isolate, name, isolate->factory()->then_string()) &&
-        !IsSymbol(*name)) {
-      JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), ns);
-      return true;
-    }
+void JSDeferredModuleNamespace::EvaluateAndMaybeTransition(
+    Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> ns) {
+  Handle<Module> module = handle(ns->module(), isolate);
+  // let's shortcut it here if it's already evaluated
+  if (module->status() == Module::kEvaluated) {
+    return;
   }
 
-  return false;
+  JSDeferredModuleNamespace::EvaluateModuleSync(isolate, ns);
+  // Check for exceptions after evaluation
+  if (isolate->has_exception()) {
+    return;
+  }
+
+  // Create a copy of the current map without named interceptors
+  DirectHandle<Map> current_map = handle(ns->map(), isolate);
+  DirectHandle<Map> new_map = Map::Copy(isolate, current_map, "RemoveNamedInterceptors");
+  new_map->set_has_named_interceptor(false);
+  new_map->set_has_indexed_interceptor(false);
+  // We allow extensible here to install export names. After
+  // InstallModuleNamespaceProperties, it becomes non-extisible again.
+  new_map->set_is_extensible(true);
+
+  // Apply the new map to remove interceptors
+  JSObject::MigrateToMap(isolate, ns, new_map);
+
+  // Cast to regular JSModuleNamespace after map transition
+  InstallModuleNamespaceProperties(isolate, ns, module);
+}
+
+bool JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(
+    Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> ns,
+    DirectHandle<Name> name) {
+  if (Name::Equals(isolate, name, isolate->factory()->then_string()) ||
+      IsSymbol(*name)) {
+      return false;
+  }
+  EvaluateAndMaybeTransition(isolate, ns);
+  return true;
 }
 
 // ES
@@ -606,127 +637,153 @@ bool Module::IsGraphAsync(Isolate* isolate) const {
 }
 
 // V8 Interceptor callback wrappers
-v8::Intercepted JSDeferredModuleNamespace::DeferredNamedPropertyGetterCallback(
+v8::Intercepted JSDeferredModuleNamespace::NamedPropertyGetterCallback(
     v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& info) {
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
   HandleScope scope(isolate);
-
   // Get the deferred module namespace holder
-  DirectHandle<JSDeferredModuleNamespace> deferred_holder =
+  DirectHandle<JSDeferredModuleNamespace> ns =
       Cast<JSDeferredModuleNamespace>(
           Utils::OpenDirectHandle(*info.HolderV2()));
-
-  Handle<Module> module = handle(deferred_holder->module(), isolate);
-
   DirectHandle<String> name = Cast<String>(Utils::OpenDirectHandle(*property));
-  if (Name::Equals(isolate, name, isolate->factory()->then_string()) ||
-      IsSymbol(*name)) {
+  if (!MaybeEvaluateDeferredModule(isolate, ns, name)) {
     return v8::Intercepted::kNo;
   }
-
-  JSDeferredModuleNamespace::EvaluateModuleSync(isolate, deferred_holder);
-
-  // Check for exceptions after evaluation
   if (isolate->has_exception()) {
     return v8::Intercepted::kYes;
   }
-
-  // 1. Create a copy of the current map without named interceptors
-  DirectHandle<Map> current_map = handle(deferred_holder->map(), isolate);
-  DirectHandle<Map> new_map = Map::Copy(isolate, current_map, "RemoveNamedInterceptors");
-  new_map->set_has_named_interceptor(false);
-  new_map->set_has_indexed_interceptor(false);
-
-  // Apply the new map to remove interceptors
-  JSObject::MigrateToMap(isolate, deferred_holder, new_map);
-
-  // Cast to regular JSModuleNamespace after map transition
-  DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(deferred_holder);
-  InstallModuleNamespaceProperties(isolate, ns, module);
-
   // 4. Get the property value using GetExport pattern
   DirectHandle<Object> result;
   if (ns->GetExport(isolate, name).ToHandle(&result)) {
     info.GetReturnValue().Set(Utils::ToLocal(result));
   }
-
-  return v8::Intercepted::kYes;
-}
-
-v8::Intercepted JSDeferredModuleNamespace::DeferredNamedPropertyQueryCallback(
-    v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Integer>& info) {
-  DCHECK(info.GetIsolate());
-  PrintF("DeferredNamedPropertyQueryCallback called\n");
   return v8::Intercepted::kYes;
 }
 
 v8::Intercepted
-JSDeferredModuleNamespace::DeferredIndexedPropertyGetterCallback(
+JSDeferredModuleNamespace::IndexedPropertyGetterCallback(
+    uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info) {
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  DirectHandle<String> index_string = isolate->factory()->Uint32ToString(index);
+  v8::Local<v8::Name> property = Utils::ToLocal(index_string).As<v8::Name>();
+  return NamedPropertyGetterCallback(property, info);
+}
+
+v8::Intercepted JSDeferredModuleNamespace::NamedPropertyQueryCallback(
+    v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Integer>& info) {
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  HandleScope scope(isolate);
+  DirectHandle<JSDeferredModuleNamespace> ns =
+      Cast<JSDeferredModuleNamespace>(Utils::OpenDirectHandle(*info.HolderV2()));
+  DirectHandle<String> name = Cast<String>(Utils::OpenDirectHandle(*property));
+  if (!MaybeEvaluateDeferredModule(isolate, ns, name)) {
+    return v8::Intercepted::kNo;
+  }
+  if (isolate->has_exception()) {
+    return v8::Intercepted::kYes;
+  }
+  if (ns->HasExport(isolate, name)) {
+    // Module namespace properties are enumerable and non-configurable
+    info.GetReturnValue().Set(PropertyAttributes::DONT_DELETE);
+    return v8::Intercepted::kYes;
+  }
+  info.GetReturnValue().Set(PropertyAttributes::ABSENT);
+  return v8::Intercepted::kYes;
+}
+
+v8::Intercepted JSDeferredModuleNamespace::IndexedPropertyQueryCallback(
+    uint32_t index, const v8::PropertyCallbackInfo<v8::Integer>& info) {
+  // Convert index to a v8::Local<v8::Name> using internal factory
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  DirectHandle<String> index_string = isolate->factory()->Uint32ToString(index);
+  v8::Local<v8::Name> property = Utils::ToLocal(index_string).As<v8::Name>();
+
+  // Reuse the named property query callback
+  return NamedPropertyQueryCallback(property, info);
+}
+
+v8::Intercepted JSDeferredModuleNamespace::NamedPropertyDeleterCallback(
+    v8::Local<v8::Name> property,
+    const v8::PropertyCallbackInfo<v8::Boolean>& info) {
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  HandleScope scope(isolate);
+  DirectHandle<JSDeferredModuleNamespace> ns = Cast<JSDeferredModuleNamespace>(
+      Utils::OpenDirectHandle(*info.HolderV2()));
+  DirectHandle<String> name = Cast<String>(Utils::OpenDirectHandle(*property));
+  if (!MaybeEvaluateDeferredModule(isolate, ns, name)) {
+    return v8::Intercepted::kNo;
+  }
+  if (isolate->has_exception()) {
+    return v8::Intercepted::kYes;
+  }
+  if (ns->HasExport(isolate, name)) {
+    isolate->Throw(*isolate->factory()->NewTypeError(
+        MessageTemplate::kStrictDeleteProperty, name, ns));
+    return v8::Intercepted::kYes;
+  }
+  info.GetReturnValue().Set(true);
+  return v8::Intercepted::kYes;
+}
+
+v8::Intercepted JSDeferredModuleNamespace::IndexedPropertyDeleterCallback(
+    uint32_t index, const v8::PropertyCallbackInfo<v8::Boolean>& info) {
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  DirectHandle<String> index_string = isolate->factory()->Uint32ToString(index);
+  v8::Local<v8::Name> property = Utils::ToLocal(index_string).As<v8::Name>();
+  return NamedPropertyDeleterCallback(property, info);
+}
+
+v8::Intercepted JSDeferredModuleNamespace::NamedPropertyDescriptorCallback(
+    v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& info) {
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  HandleScope scope(isolate);
+  DirectHandle<JSDeferredModuleNamespace> ns =
+      Cast<JSDeferredModuleNamespace>(Utils::OpenDirectHandle(*info.HolderV2()));
+  DirectHandle<String> name = Cast<String>(Utils::OpenDirectHandle(*property));
+  if (!MaybeEvaluateDeferredModule(isolate, ns, name)) {
+    return v8::Intercepted::kNo;
+  }
+  if (isolate->has_exception()) {
+    return v8::Intercepted::kYes;
+  }
+  if (ns->HasExport(isolate, name)) {
+    DirectHandle<Object> value;
+    if (ns->GetExport(isolate, name).ToHandle(&value)) {
+      // Create a property descriptor object
+      // Module namespace properties are: enumerable: true, configurable: false,
+      // writable: true
+      DirectHandle<JSObject> descriptor = isolate->factory()->NewJSObject(
+          isolate->object_function());
+
+      JSObject::AddProperty(isolate, descriptor,
+                           isolate->factory()->value_string(), value, NONE);
+      JSObject::AddProperty(isolate, descriptor,
+                           isolate->factory()->writable_string(),
+                           isolate->factory()->true_value(), NONE);
+      JSObject::AddProperty(isolate, descriptor,
+                           isolate->factory()->enumerable_string(),
+                           isolate->factory()->true_value(), NONE);
+      JSObject::AddProperty(isolate, descriptor,
+                           isolate->factory()->configurable_string(),
+                           isolate->factory()->false_value(), NONE);
+
+      info.GetReturnValue().Set(Utils::ToLocal(descriptor));
+      return v8::Intercepted::kYes;
+    }
+  }
+
+  return v8::Intercepted::kNo;
+}
+
+v8::Intercepted JSDeferredModuleNamespace::IndexedPropertyDescriptorCallback(
     uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info) {
   // Convert index to a v8::Local<v8::Name> using internal factory
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
   DirectHandle<String> index_string = isolate->factory()->Uint32ToString(index);
   v8::Local<v8::Name> property = Utils::ToLocal(index_string).As<v8::Name>();
 
-  // Reuse the named property getter callback
-  return DeferredNamedPropertyGetterCallback(property, info);
-}
-
-v8::Intercepted JSDeferredModuleNamespace::DeferredNamedPropertyDeleterCallback(
-    v8::Local<v8::Name> property,
-    const v8::PropertyCallbackInfo<v8::Boolean>& info) {
-  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
-  HandleScope scope(isolate);
-
-  // Get the deferred module namespace holder
-  DirectHandle<JSDeferredModuleNamespace> deferred_holder =
-      Cast<JSDeferredModuleNamespace>(Utils::OpenDirectHandle(*info.HolderV2()));
-
-  Handle<Module> module = handle(deferred_holder->module(), isolate);
-
-  // Skip evaluation for special properties like 'then' (to avoid thenable behavior)
-  DirectHandle<String> name = Cast<String>(Utils::OpenDirectHandle(*property));
-  if (Name::Equals(isolate, name, isolate->factory()->then_string()) ||
-      IsSymbol(*name)) {
-    return v8::Intercepted::kNo;
-  }
-
-  // Trigger deferred module evaluation
-  JSDeferredModuleNamespace::EvaluateModuleSync(isolate, deferred_holder);
-
-  // Check for exceptions after evaluation
-  if (isolate->has_exception()) {
-    return v8::Intercepted::kYes;
-  }
-
-  // Create a copy of the current map without named interceptors
-  DirectHandle<Map> current_map = handle(deferred_holder->map(), isolate);
-  DirectHandle<Map> new_map =
-      Map::Copy(isolate, current_map, "RemoveNamedInterceptors");
-  new_map->set_has_named_interceptor(false);
-  new_map->set_has_indexed_interceptor(false);
-
-  // Apply the new map to remove interceptors
-  JSObject::MigrateToMap(isolate, deferred_holder, new_map);
-
-  // Cast to regular JSModuleNamespace after map transition
-  DirectHandle<JSModuleNamespace> ns = Cast<JSModuleNamespace>(deferred_holder);
-  InstallModuleNamespaceProperties(isolate, ns, module);
-
-  // Module namespace properties are non-configurable, so deletion always fails
-  info.GetReturnValue().Set(false);
-  return v8::Intercepted::kYes;
-}
-
-v8::Intercepted JSDeferredModuleNamespace::DeferredIndexedPropertyDeleterCallback(
-    uint32_t index, const v8::PropertyCallbackInfo<v8::Boolean>& info) {
-  // Convert index to a v8::Local<v8::Name> using internal factory
-  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
-  DirectHandle<String> index_string = isolate->factory()->Uint32ToString(index);
-  v8::Local<v8::Name> property = Utils::ToLocal(index_string).As<v8::Name>();
-
-  // Reuse the named property deleter callback
-  return DeferredNamedPropertyDeleterCallback(property, info);
+  // Reuse the named property descriptor callback
+  return NamedPropertyDescriptorCallback(property, info);
 }
 
 }  // namespace internal

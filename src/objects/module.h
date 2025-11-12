@@ -181,20 +181,35 @@ class JSDeferredModuleNamespace
 
   static void EvaluateModuleSync(
       Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder);
-  static bool MaybeEvaluateDeferredModule(LookupIterator* it);
-
+  static void EvaluateAndMaybeTransition(
+      Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> ns);
+  static bool MaybeEvaluateDeferredModule(
+      Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> ns, DirectHandle<Name> name);
 
   // V8 Interceptor callback wrappers
-  static v8::Intercepted DeferredNamedPropertyGetterCallback(
-      v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& info);
-  static v8::Intercepted DeferredNamedPropertyQueryCallback(
-      v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Integer>& info);
-  static v8::Intercepted DeferredIndexedPropertyGetterCallback(
+  static v8::Intercepted NamedPropertyGetterCallback(
+      v8::Local<v8::Name> property,
+      const v8::PropertyCallbackInfo<v8::Value>& info);
+  static v8::Intercepted IndexedPropertyGetterCallback(
       uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info);
-  static v8::Intercepted DeferredNamedPropertyDeleterCallback(
-      v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Boolean>& info);
-  static v8::Intercepted DeferredIndexedPropertyDeleterCallback(
+
+  static v8::Intercepted NamedPropertyQueryCallback(
+      v8::Local<v8::Name> property,
+      const v8::PropertyCallbackInfo<v8::Integer>& info);
+  static v8::Intercepted IndexedPropertyQueryCallback(
+      uint32_t index, const v8::PropertyCallbackInfo<v8::Integer>& info);
+
+  static v8::Intercepted NamedPropertyDeleterCallback(
+      v8::Local<v8::Name> property,
+      const v8::PropertyCallbackInfo<v8::Boolean>& info);
+  static v8::Intercepted IndexedPropertyDeleterCallback(
       uint32_t index, const v8::PropertyCallbackInfo<v8::Boolean>& info);
+
+  static v8::Intercepted NamedPropertyDescriptorCallback(
+      v8::Local<v8::Name> property,
+      const v8::PropertyCallbackInfo<v8::Value>& info);
+  static v8::Intercepted IndexedPropertyDescriptorCallback(
+      uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info);
 
   // We need to include in-object fields
   // TODO(v8:8944): improve handling of in-object fields

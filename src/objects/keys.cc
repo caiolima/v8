@@ -257,6 +257,13 @@ Maybe<bool> KeyAccumulator::CollectKeys(DirectHandle<JSReceiver> receiver,
     return Just(true);
   }
 
+  // if (mode_ == KeyCollectionMode::kOwnOnly &&
+  //     IsJSDeferredModuleNamespace(*object)) {
+  //   JSDeferredModuleNamespace::EvaluateAndMaybeTransition(
+  //       isolate_, Cast<JSDeferredModuleNamespace>(object));
+  //    RETURN_EXCEPTION_IF_EXCEPTION(isolate_);
+  // }
+
   PrototypeIterator::WhereToEnd end = mode_ == KeyCollectionMode::kOwnOnly
                                           ? PrototypeIterator::END_AT_NON_HIDDEN
                                           : PrototypeIterator::END_AT_NULL;
@@ -1051,7 +1058,7 @@ Maybe<bool> KeyAccumulator::CollectOwnPropertyNames(
   if (IsJSDeferredModuleNamespace(*object)) {
     DirectHandle<JSDeferredModuleNamespace> ns =
         Cast<JSDeferredModuleNamespace>(object);
-    JSDeferredModuleNamespace::EvaluateModuleSync(isolate_, ns);
+    JSDeferredModuleNamespace::EvaluateAndMaybeTransition(isolate_, ns);
     RETURN_VALUE_IF_EXCEPTION(isolate_, Nothing<bool>());
   }
 

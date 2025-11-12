@@ -3479,11 +3479,18 @@ Factory::NewJSDeferredModuleNamespace() {
       InterceptorInfo::kNamed));
   named_interceptor_info->set_named_getter(
       isolate(), reinterpret_cast<Address>(
-          JSDeferredModuleNamespace::DeferredNamedPropertyGetterCallback));
+          JSDeferredModuleNamespace::NamedPropertyGetterCallback));
   named_interceptor_info->set_named_deleter(
       isolate(),
       reinterpret_cast<Address>(
-          JSDeferredModuleNamespace::DeferredNamedPropertyDeleterCallback));
+          JSDeferredModuleNamespace::NamedPropertyDeleterCallback));
+  named_interceptor_info->set_named_query(
+      isolate(), reinterpret_cast<Address>(
+                     JSDeferredModuleNamespace::NamedPropertyQueryCallback));
+  named_interceptor_info->set_named_descriptor(
+      isolate(),
+      reinterpret_cast<Address>(
+          JSDeferredModuleNamespace::NamedPropertyDescriptorCallback));
   deferred_namespace->set_named_interceptor_info(*named_interceptor_info);
 
   DirectHandle<InterceptorInfo> indexed_interceptor_info = NewInterceptorInfo();
@@ -3491,12 +3498,18 @@ Factory::NewJSDeferredModuleNamespace() {
   indexed_interceptor_info->set_indexed_getter(
       isolate(),
       reinterpret_cast<Address>(
-          JSDeferredModuleNamespace::DeferredIndexedPropertyGetterCallback));
+          JSDeferredModuleNamespace::IndexedPropertyGetterCallback));
   indexed_interceptor_info->set_indexed_deleter(
       isolate(),
       reinterpret_cast<Address>(
-          JSDeferredModuleNamespace::DeferredIndexedPropertyDeleterCallback));
-
+          JSDeferredModuleNamespace::IndexedPropertyDeleterCallback));
+  indexed_interceptor_info->set_indexed_query(
+      isolate(), reinterpret_cast<Address>(
+                     JSDeferredModuleNamespace::IndexedPropertyQueryCallback));
+  indexed_interceptor_info->set_indexed_descriptor(
+      isolate(),
+      reinterpret_cast<Address>(
+          JSDeferredModuleNamespace::IndexedPropertyDescriptorCallback));
   deferred_namespace->set_indexed_interceptor_info(*indexed_interceptor_info);
   return deferred_namespace;
 }
