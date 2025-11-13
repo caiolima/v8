@@ -406,14 +406,6 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   } else {
     DCHECK(phase == ModuleImportPhase::kDefer);
     module->set_deferred_module_namespace(*ns);
-    // FIXME(caiolima): mark this object as non-extensible. Evaluate if we could
-    // create the map already as non-extensible.
-    DirectHandle<Map> new_map = Map::Copy(
-        isolate, direct_handle(ns->map(), isolate), "PreventExtensions");
-
-    new_map->set_is_extensible(false);
-    JSObject::MigrateToMap(isolate, ns, new_map);
-
     JSObject::OptimizeAsPrototype(ns);
   }
 
@@ -641,7 +633,6 @@ v8::Intercepted JSDeferredModuleNamespace::NamedPropertyGetterCallback(
     v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& info) {
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
   HandleScope scope(isolate);
-  // Get the deferred module namespace holder
   DirectHandle<JSDeferredModuleNamespace> ns =
       Cast<JSDeferredModuleNamespace>(
           Utils::OpenDirectHandle(*info.HolderV2()));
@@ -652,7 +643,6 @@ v8::Intercepted JSDeferredModuleNamespace::NamedPropertyGetterCallback(
   if (isolate->has_exception()) {
     return v8::Intercepted::kYes;
   }
-  // 4. Get the property value using GetExport pattern
   DirectHandle<Object> result;
   if (ns->GetExport(isolate, name).ToHandle(&result)) {
     info.GetReturnValue().Set(Utils::ToLocal(result));
@@ -670,7 +660,8 @@ JSDeferredModuleNamespace::IndexedPropertyGetterCallback(
 }
 
 v8::Intercepted JSDeferredModuleNamespace::NamedPropertyQueryCallback(
-    v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Integer>& info) {
+    v8::Local<v8::Name> property,
+    const v8::PropertyCallbackInfo<v8::Integer>& info) {
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
   HandleScope scope(isolate);
   DirectHandle<JSDeferredModuleNamespace> ns =
@@ -693,12 +684,9 @@ v8::Intercepted JSDeferredModuleNamespace::NamedPropertyQueryCallback(
 
 v8::Intercepted JSDeferredModuleNamespace::IndexedPropertyQueryCallback(
     uint32_t index, const v8::PropertyCallbackInfo<v8::Integer>& info) {
-  // Convert index to a v8::Local<v8::Name> using internal factory
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
   DirectHandle<String> index_string = isolate->factory()->Uint32ToString(index);
   v8::Local<v8::Name> property = Utils::ToLocal(index_string).As<v8::Name>();
-
-  // Reuse the named property query callback
   return NamedPropertyQueryCallback(property, info);
 }
 
@@ -734,7 +722,8 @@ v8::Intercepted JSDeferredModuleNamespace::IndexedPropertyDeleterCallback(
 }
 
 v8::Intercepted JSDeferredModuleNamespace::NamedPropertyDescriptorCallback(
-    v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& info) {
+    v8::Local<v8::Name> property,
+    const v8::PropertyCallbackInfo<v8::Value>& info) {
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
   HandleScope scope(isolate);
   DirectHandle<JSDeferredModuleNamespace> ns =

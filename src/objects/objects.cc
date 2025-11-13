@@ -2331,6 +2331,20 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
         continue;  // Continue to the prototype, if present.
 
       case LookupIterator::INTERCEPTOR: {
+        DirectHandle<JSReceiver> holder = it->GetHolder<JSReceiver>();
+        if (IsJSDeferredModuleNamespace(*holder)) {
+          DirectHandle<JSDeferredModuleNamespace> ns =
+              Cast<JSDeferredModuleNamespace>(holder);
+
+          if (it->HolderIsReceiverOrHiddenPrototype() &&
+              IsString(*it->GetName()) &&
+              ns->HasExport(it->isolate(), Cast<String>(it->GetName()))) {
+            return WriteToReadOnlyProperty(it, value, should_throw);
+          }
+
+          *found = false;
+          return Nothing<bool>();
+        }
         if (it->HolderIsReceiverOrHiddenPrototype()) {
           InterceptorResult result;
           if (!JSObject::SetPropertyWithInterceptor(it, should_throw, value)

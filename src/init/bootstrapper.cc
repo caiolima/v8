@@ -4584,6 +4584,7 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
     map->set_has_named_interceptor(true);
     map->set_has_indexed_interceptor(true);
     map->set_may_have_interesting_properties(true);
+    map->set_is_extensible(false);
     Map::SetPrototype(isolate(), map, isolate_->factory()->null_value());
     Map::EnsureDescriptorSlack(isolate_, map, 1);
     native_context()->set_js_deferred_module_namespace_map(*map);
