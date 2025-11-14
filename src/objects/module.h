@@ -153,6 +153,10 @@ class JSModuleNamespace
       DirectHandle<Object> key, PropertyDescriptor* desc,
       Maybe<ShouldThrow> should_throw);
 
+  static void InstallModuleNamespaceProperties(
+      Isolate* isolate, DirectHandle<JSModuleNamespace> ns,
+      Handle<Module> module);
+
   // In-object fields.
   enum {
     kToStringTagFieldIndex,
@@ -181,10 +185,11 @@ class JSDeferredModuleNamespace
 
   static void EvaluateModuleSync(
       Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder);
-  static void EvaluateAndMaybeTransition(
+  static void MaybeEvaluateAndTransition(
       Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> ns);
   static bool MaybeEvaluateDeferredModule(
-      Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> ns, DirectHandle<Name> name);
+      Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> ns,
+      DirectHandle<Name> name);
 
   // V8 Interceptor callback wrappers
   static v8::Intercepted NamedPropertyGetterCallback(

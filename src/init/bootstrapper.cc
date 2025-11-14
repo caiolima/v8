@@ -26,6 +26,7 @@
 #include "src/objects/instance-type.h"
 #include "src/objects/js-array.h"
 #include "src/objects/js-function.h"
+#include "src/objects/module.h"
 #include "src/objects/objects.h"
 #include "src/sandbox/testing.h"
 #ifdef ENABLE_VTUNE_TRACEMARK
@@ -4564,40 +4565,97 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
   }
 
   {  // -- J S D e f e r r e d M o d u l e N a m e s p a c e
-    // Create InterceptorInfo for deferred module namespaces
-    // DirectHandle<InterceptorInfo> deferred_interceptor_info = factory->NewInterceptorInfo();
-    // deferred_interceptor_info->set_data(ReadOnlyRoots(isolate_).undefined_value());
-    // deferred_interceptor_info->set_flags(InterceptorInfo::Flags(
-    //     InterceptorInfo::kNamed | InterceptorInfo::kHasNoSideEffect));
-    // deferred_interceptor_info->set_named_getter(
-    //     isolate_, reinterpret_cast<Address>(
-    //         JSDeferredModuleNamespace::DeferredNamedPropertyGetterCallback));
-    // deferred_interceptor_info->set_named_query(
-    //     isolate_, reinterpret_cast<Address>(
-    //         JSDeferredModuleNamespace::DeferredNamedPropertyQueryCallback));
+    DirectHandle<FunctionTemplateInfo> function_template_info =
+        factory->NewFunctionTemplateInfo(0, false);
+
+    // Create a NamedInterceptorInfo
+    DirectHandle<InterceptorInfo> named_interceptor_info =
+        factory->NewInterceptorInfo();
+    named_interceptor_info->set_data(
+        ReadOnlyRoots(isolate()).undefined_value());
+    named_interceptor_info->set_flags(
+        InterceptorInfo::Flags(InterceptorInfo::kNamed));
+    named_interceptor_info->set_named_getter(
+        isolate(),
+        ExternalReference::js_deferred_module_namespace_named_getter_callback()
+            .address());
+    named_interceptor_info->set_named_deleter(
+        isolate(),
+        ExternalReference::js_deferred_module_namespace_named_deleter_callback()
+            .address());
+    named_interceptor_info->set_named_query(
+        isolate(),
+        ExternalReference::js_deferred_module_namespace_named_query_callback()
+            .address());
+    named_interceptor_info->set_named_descriptor(
+        isolate(), ExternalReference::
+                       js_deferred_module_namespace_named_descriptor_callback()
+                           .address());
+    FunctionTemplateInfo::SetNamedPropertyHandler(
+        isolate(), function_template_info, named_interceptor_info);
+
+    // Create Indexed Interceptor Info
+    DirectHandle<InterceptorInfo> indexed_interceptor_info =
+        factory->NewInterceptorInfo();
+    indexed_interceptor_info->set_data(
+        ReadOnlyRoots(isolate()).undefined_value());
+    indexed_interceptor_info->set_indexed_getter(
+        isolate(), ExternalReference::
+                       js_deferred_module_namespace_indexed_getter_callback()
+                           .address());
+    indexed_interceptor_info->set_indexed_deleter(
+        isolate(), ExternalReference::
+                       js_deferred_module_namespace_indexed_deleter_callback()
+                           .address());
+    indexed_interceptor_info->set_indexed_query(
+        isolate(),
+        ExternalReference::js_deferred_module_namespace_indexed_query_callback()
+            .address());
+    indexed_interceptor_info->set_indexed_descriptor(
+        isolate(),
+        ExternalReference::
+            js_deferred_module_namespace_indexed_descriptor_callback()
+                .address());
+    FunctionTemplateInfo::SetIndexedPropertyHandler(
+        isolate(), function_template_info, indexed_interceptor_info);
+
+    // Create the map from the function template
+    DirectHandle<ObjectTemplateInfo> object_template_info =
+        factory->NewObjectTemplateInfo(function_template_info, false);
+
+    DirectHandle<FunctionTemplateInfo> constructor_template(
+        Cast<FunctionTemplateInfo>(object_template_info->constructor()),
+        isolate());
+    DirectHandle<SharedFunctionInfo> shared =
+        FunctionTemplateInfo::GetOrCreateSharedFunctionInfo(
+            isolate(), constructor_template, MaybeDirectHandle<Name>());
+    Handle<JSFunction> constructor =
+        Factory::JSFunctionBuilder{isolate(), shared,
+                                   isolate()->native_context()}
+            .Build();
 
     DirectHandle<Map> map = factory->NewContextfulMapForCurrentContext(
         JS_DEFERRED_MODULE_NAMESPACE_TYPE, JSDeferredModuleNamespace::kSize,
         TERMINAL_FAST_ELEMENTS_KIND,
         JSDeferredModuleNamespace::kInObjectFieldCount);
-    map->SetConstructor(native_context()->object_function());
+
     map->set_has_named_interceptor(true);
     map->set_has_indexed_interceptor(true);
-    map->set_may_have_interesting_properties(true);
     map->set_is_extensible(false);
-    Map::SetPrototype(isolate(), map, isolate_->factory()->null_value());
-    Map::EnsureDescriptorSlack(isolate_, map, 1);
-    native_context()->set_js_deferred_module_namespace_map(*map);
+    map->set_may_have_interesting_properties(true);
+    Map::EnsureDescriptorSlack(isolate(), map, 1);
 
-    {  // Install @@toStringTag.
-      PropertyAttributes attribs =
-          static_cast<PropertyAttributes>(DONT_DELETE | DONT_ENUM | READ_ONLY);
-      Descriptor d = Descriptor::DataField(
-          isolate(), factory->to_string_tag_symbol(),
-          JSDeferredModuleNamespace::kToStringTagFieldIndex, attribs,
-          Representation::Tagged());
-      map->AppendDescriptor(isolate(), &d);
-    }
+    PropertyAttributes attribs =
+        static_cast<PropertyAttributes>(DONT_DELETE | DONT_ENUM | READ_ONLY);
+    Descriptor d =
+        Descriptor::DataField(isolate(), factory->to_string_tag_symbol(),
+                              JSDeferredModuleNamespace::kToStringTagFieldIndex,
+                              attribs, Representation::Tagged());
+    map->AppendDescriptor(isolate(), &d);
+    JSFunction::SetInitialMap(isolate(), constructor, map,
+                              factory->null_value());
+
+    native_context()->set_js_deferred_module_namespace_map(*map);
   }
 
   {  // -- I t e r a t o r and helpers

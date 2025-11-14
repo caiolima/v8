@@ -170,7 +170,6 @@ constexpr bool CanTriggerGC(T... properties) {
   F(IsBreakOnException, 1, 1)                   \
   F(LiveEditPatchScript, 2, 1)                  \
   F(ProfileCreateSnapshotDataBlob, 0, 1)        \
-  F(CreateObjectWithNamedInterceptor, 0, 1)     \
   F(ScheduleBreak, 0, 1)                        \
   F(ScriptLocationFromLine2, 4, 1)              \
   F(SetGeneratorScopeVariableValue, 4, 1)       \

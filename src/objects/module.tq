@@ -22,10 +22,7 @@ extern class JSModuleNamespace extends JSSpecialObject {
   module: Module;
 }
 
-extern class JSDeferredModuleNamespace extends JSModuleNamespace {
-  named_interceptor_info: InterceptorInfo;
-  indexed_interceptor_info: InterceptorInfo;
-}
+extern class JSDeferredModuleNamespace extends JSModuleNamespace {}
 
 @cppObjectLayoutDefinition
 extern class ScriptOrModule extends Struct {

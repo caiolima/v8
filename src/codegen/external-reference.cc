@@ -33,6 +33,7 @@
 #include "src/numbers/math-random.h"
 #include "src/objects/elements-kind.h"
 #include "src/objects/elements.h"
+#include "src/objects/module.h"
 #include "src/objects/object-type.h"
 #include "src/objects/objects-inl.h"
 #include "src/objects/ordered-hash-table.h"
@@ -1892,6 +1893,26 @@ static int EnterContextWrapper(HandleScopeImplementer* hsi,
 }
 
 FUNCTION_REFERENCE(call_enter_context_function, EnterContextWrapper)
+
+RAW_FUNCTION_REFERENCE(js_deferred_module_namespace_named_getter_callback,
+                       JSDeferredModuleNamespace::NamedPropertyGetterCallback)
+RAW_FUNCTION_REFERENCE(js_deferred_module_namespace_named_deleter_callback,
+                       JSDeferredModuleNamespace::NamedPropertyDeleterCallback)
+RAW_FUNCTION_REFERENCE(js_deferred_module_namespace_named_query_callback,
+                       JSDeferredModuleNamespace::NamedPropertyQueryCallback)
+RAW_FUNCTION_REFERENCE(
+    js_deferred_module_namespace_named_descriptor_callback,
+    JSDeferredModuleNamespace::NamedPropertyDescriptorCallback)
+RAW_FUNCTION_REFERENCE(js_deferred_module_namespace_indexed_getter_callback,
+                       JSDeferredModuleNamespace::IndexedPropertyGetterCallback)
+RAW_FUNCTION_REFERENCE(
+    js_deferred_module_namespace_indexed_deleter_callback,
+    JSDeferredModuleNamespace::IndexedPropertyDeleterCallback)
+RAW_FUNCTION_REFERENCE(js_deferred_module_namespace_indexed_query_callback,
+                       JSDeferredModuleNamespace::IndexedPropertyQueryCallback)
+RAW_FUNCTION_REFERENCE(
+    js_deferred_module_namespace_indexed_descriptor_callback,
+    JSDeferredModuleNamespace::IndexedPropertyDescriptorCallback)
 
 bool operator==(ExternalReference lhs, ExternalReference rhs) {
   return lhs.raw() == rhs.raw();

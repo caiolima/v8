@@ -307,23 +307,11 @@ void JSObject::initialize_elements() {
 }
 
 DEF_GETTER(JSObject, GetIndexedInterceptor, Tagged<InterceptorInfo>) {
-  Tagged<Map> current_map = map(cage_base);
-  if (current_map->instance_type() == JS_DEFERRED_MODULE_NAMESPACE_TYPE) {
-    // FIXME(caiolima): just for simplicity, let's set it to the object itself, but it can be a root later.
-    DCHECK(current_map->has_indexed_interceptor());
-    return Cast<JSDeferredModuleNamespace>(Tagged(*this))->indexed_interceptor_info();
-  }
-  return current_map->GetIndexedInterceptor(cage_base);
+  return map(cage_base)->GetIndexedInterceptor(cage_base);
 }
 
 DEF_GETTER(JSObject, GetNamedInterceptor, Tagged<InterceptorInfo>) {
-  Tagged<Map> current_map = map(cage_base);
-  if (current_map->instance_type() == JS_DEFERRED_MODULE_NAMESPACE_TYPE) {
-    // FIXME(caiolima): just for simplicity, let's set it to the object itself, but it can be a root later.
-    DCHECK(current_map->has_named_interceptor());
-    return Cast<JSDeferredModuleNamespace>(Tagged(*this))->named_interceptor_info();
-  }
-  return current_map->GetNamedInterceptor(cage_base);
+  return map(cage_base)->GetNamedInterceptor(cage_base);
 }
 
 // static

@@ -128,14 +128,8 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
         return Just(false);
       case LookupIterator::ACCESSOR:
       case LookupIterator::DATA:
-        // if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
-        //   RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        // }
         return Just(true);
       case LookupIterator::NOT_FOUND:
-        // if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
-        //   RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        // }
         return Just(false);
     }
     UNREACHABLE();
@@ -1019,9 +1013,6 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
         return Just(true);
       case LookupIterator::DATA:
       case LookupIterator::ACCESSOR: {
-        // if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
-        //   RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        // }
         DirectHandle<JSObject> holder = it->GetHolder<JSObject>();
         if (!it->IsConfigurable() ||
             (IsJSTypedArray(*holder) && it->IsElement(*holder))) {
@@ -1042,9 +1033,6 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
         return Just(true);
       }
       case LookupIterator::NOT_FOUND:
-        // if (JSDeferredModuleNamespace::MaybeEvaluateDeferredModule(it)) {
-        //   RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        // }
         return Just(true);
     }
     UNREACHABLE();
@@ -1312,12 +1300,13 @@ Maybe<PropertyAttributes> GetPropertyAttributesWithInterceptorInternal(
       CHECK(Object::ToInt32(*result, &value));
       DCHECK_IMPLIES((value & ~PropertyAttributes::ALL_ATTRIBUTES_MASK) != 0,
                      value == PropertyAttributes::ABSENT);
-      // In case of absent property side effects are only allowed if holder is a deferred module namespace.
+      // In case of absent property side effects are only allowed if holder is a
+      // deferred module namespace.
       // TODO(ishell): PropertyAttributes::ABSENT is not exposed in the Api,
       // so it can't be officially returned. We should fix the tests instead.
       if (value != PropertyAttributes::ABSENT ||
           (value == PropertyAttributes::ABSENT &&
-           IsJSDeferredModuleNamespace(*holder))){
+           IsJSDeferredModuleNamespace(*holder))) {
         args.AcceptSideEffects();
       }
       return Just(static_cast<PropertyAttributes>(value));
@@ -4381,7 +4370,7 @@ Maybe<bool> JSObject::PreventExtensions(Isolate* isolate,
   }
 
   if (object->map()->has_named_interceptor() ||
-       object->map()->has_indexed_interceptor()) {
+      object->map()->has_indexed_interceptor()) {
     RETURN_FAILURE(isolate, should_throw,
                    NewTypeError(MessageTemplate::kCannotPreventExt));
   }

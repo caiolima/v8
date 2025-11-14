@@ -873,29 +873,9 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
     if (lookup->IsPrivateName()) {
       handler = MaybeObjectHandle(LoadHandler::LoadSlow(isolate()));
     } else {
-      DirectHandle<JSReceiver> maybe_holder = lookup->CurrentHolder();
-      if (!maybe_holder.is_null() &&
-          IsJSDeferredModuleNamespace(*maybe_holder)) {
-        DirectHandle<JSDeferredModuleNamespace> ns =
-            Cast<JSDeferredModuleNamespace>(maybe_holder);
-        if (ns->module()->status() == Module::kEvaluated) {
-          TRACE_HANDLER_STATS(isolate(), LoadIC_LoadNonexistentDH);
-          handler = MaybeObjectHandle(LoadHandler::LoadNonExistent(
-              isolate(), lookup_start_object_map()));
-        } else if (ns->module()->status() == Module::kErrored) {
-          // At this point it's known that this access needs to throw an error,
-          // so we install a slow path
-          handler = MaybeObjectHandle(LoadHandler::LoadSlow(isolate()));
-        } else {
-          // The module was not evaluated yet, so we wait to properly update the
-          // cache later
-          return;
-        }
-      } else {
-        TRACE_HANDLER_STATS(isolate(), LoadIC_LoadNonexistentDH);
-        handler = MaybeObjectHandle(
-            LoadHandler::LoadNonExistent(isolate(), lookup_start_object_map()));
-      }
+      TRACE_HANDLER_STATS(isolate(), LoadIC_LoadNonexistentDH);
+      handler = MaybeObjectHandle(
+          LoadHandler::LoadNonExistent(isolate(), lookup_start_object_map()));
     }
   } else if (IsLoadGlobalIC() && lookup->state() == LookupIterator::JSPROXY) {
     // If there is proxy just install the slow stub since we need to call the
@@ -917,9 +897,6 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
       }
     }
     handler = ComputeHandler(lookup);
-    if (handler.is_null()) {
-      return;
-    }
     CHECK(lookup->state() == LookupIterator::STRING_LOOKUP_START_OBJECT ||
           *lookup->GetHolder<Object>() == *(lookup->lookup_start_object()) ||
           LoadHandler::CanHandleHolderNotLookupStart(*handler.object()));
@@ -1030,19 +1007,6 @@ MaybeObjectHandle LoadIC::ComputeHandler(LookupIterator* lookup) {
         TRACE_HANDLER_STATS(isolate(), LoadIC_LoadFieldDH);
         return MaybeObjectHandle(
             LoadHandler::LoadField(isolate(), field_index));
-      }
-      if (IsJSDeferredModuleNamespace(*holder)) {
-        DirectHandle<JSDeferredModuleNamespace> ns =
-            Cast<JSDeferredModuleNamespace>(holder);
-        if (ns->module()->status() == Module::kErrored) {
-          // At this point we already know that every access for this module
-          // should throw, so we install slow path.
-          return MaybeObjectHandle(LoadHandler::LoadSlow(isolate()));
-        } else if (ns->module()->status() != Module::kEvaluated) {
-          // At this point the module was not evaluated yet, so let's try to
-          // cache on next access.
-          return MaybeObjectHandle();
-        }
       }
       if (IsJSModuleNamespace(*holder)) {
         DirectHandle<ObjectHashTable> exports(

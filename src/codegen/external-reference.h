@@ -480,6 +480,22 @@ enum class IsolateFieldId : uint8_t;
   V(typed_array_and_rab_gsab_typed_array_elements_kind_sizes,                  \
     "TypedArrayAndRabGsabTypedArrayElementsKindSizes")                         \
   V(allocate_buffer, "AllocateBuffer")                                         \
+  V(js_deferred_module_namespace_named_getter_callback,                        \
+    "JSDeferredModuleNamespace::NamedPropertyGetterCallback")                  \
+  V(js_deferred_module_namespace_named_deleter_callback,                       \
+    "JSDeferredModuleNamespace::NamedPropertyDeleterCallback")                 \
+  V(js_deferred_module_namespace_named_query_callback,                         \
+    "JSDeferredModuleNamespace::NamedPropertyQueryCallback")                   \
+  V(js_deferred_module_namespace_named_descriptor_callback,                    \
+    "JSDeferredModuleNamespace::NamedPropertyDescriptorCallback")              \
+  V(js_deferred_module_namespace_indexed_getter_callback,                      \
+    "JSDeferredModuleNamespace::IndexedPropertyGetterCallback")                \
+  V(js_deferred_module_namespace_indexed_deleter_callback,                     \
+    "JSDeferredModuleNamespace::IndexedPropertyDeleterCallback")               \
+  V(js_deferred_module_namespace_indexed_query_callback,                       \
+    "JSDeferredModuleNamespace::IndexedPropertyQueryCallback")                 \
+  V(js_deferred_module_namespace_indexed_descriptor_callback,                  \
+    "JSDeferredModuleNamespace::IndexedPropertyDescriptorCallback")            \
   EXTERNAL_REFERENCE_LIST_INTL(V)                                              \
   EXTERNAL_REFERENCE_LIST_SANDBOX(V)                                           \
   EXTERNAL_REFERENCE_LIST_LEAPTIERING(V)                                       \
