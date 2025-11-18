@@ -1188,7 +1188,7 @@
 ####
 # import test262@a073f479f80b336256b7fc4e04700c827293e2fe
 [ALWAYS, {
-  'language/module-code/top-level-await/rejection-order': [FAIL],
+  'language/module-code/top-level-await/rejection-order': [PASS],
 }],
 # end import test262@a073f479f80b336256b7fc4e04700c827293e2fe
 ####
