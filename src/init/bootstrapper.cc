@@ -4620,15 +4620,9 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
         isolate(), function_template_info, indexed_interceptor_info);
 
     // Create the map from the function template
-    DirectHandle<ObjectTemplateInfo> object_template_info =
-        factory->NewObjectTemplateInfo(function_template_info, false);
-
-    DirectHandle<FunctionTemplateInfo> constructor_template(
-        Cast<FunctionTemplateInfo>(object_template_info->constructor()),
-        isolate());
     DirectHandle<SharedFunctionInfo> shared =
         FunctionTemplateInfo::GetOrCreateSharedFunctionInfo(
-            isolate(), constructor_template, MaybeDirectHandle<Name>());
+            isolate(), function_template_info, MaybeDirectHandle<Name>());
     Handle<JSFunction> constructor =
         Factory::JSFunctionBuilder{isolate(), shared,
                                    isolate()->native_context()}
