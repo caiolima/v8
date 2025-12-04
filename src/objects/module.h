@@ -216,6 +216,13 @@ class JSDeferredModuleNamespace
   static v8::Intercepted IndexedPropertyDescriptorCallback(
       uint32_t index, const v8::PropertyCallbackInfo<v8::Value>& info);
 
+  static v8::Intercepted NamedPropertySetterCallback(
+      v8::Local<v8::Name> property, v8::Local<v8::Value> value,
+      const v8::PropertyCallbackInfo<void>& info);
+  static v8::Intercepted IndexedPropertySetterCallback(
+      uint32_t index, v8::Local<v8::Value> value,
+      const v8::PropertyCallbackInfo<void>& info);
+
   // We need to include in-object fields
   // TODO(v8:8944): improve handling of in-object fields
   static constexpr int kSize =

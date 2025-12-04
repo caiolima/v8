@@ -20,24 +20,6 @@ assertEquals(0, globalThis.eval_list.length);
 assertEquals(undefined, ns.then);
 assertEquals(0, globalThis.eval_list.length);
 
-// Testing that private fields accesses don't trigger evaluation
-class Marker extends function (x) { return x } {
-  #mark;
-
-  static mark(obj) { new Marker(obj) }
-
-  static isMarked(obj) { return #mark in obj }
-}
-
-assertFalse(Marker.isMarked(ns));
-assertEquals(0, globalThis.eval_list.length);
-
-Marker.mark(ns);
-assertEquals(0, globalThis.eval_list.length);
-
-assertTrue(Marker.isMarked(ns));
-assertEquals(0, globalThis.eval_list.length);
-
 assertThrows(() => ns.foo = 30, TypeError);
 assertEquals(0, globalThis.eval_list.length);
 

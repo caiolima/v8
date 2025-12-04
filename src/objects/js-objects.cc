@@ -1300,13 +1300,13 @@ Maybe<PropertyAttributes> GetPropertyAttributesWithInterceptorInternal(
       CHECK(Object::ToInt32(*result, &value));
       DCHECK_IMPLIES((value & ~PropertyAttributes::ALL_ATTRIBUTES_MASK) != 0,
                      value == PropertyAttributes::ABSENT);
-      // In case of absent property side effects are only allowed if holder is a
-      // deferred module namespace.
+      // In case of absent property, we can have side effects for some internal
+      // interceptors like
+      // JSDeferredModuleNamespace::NamedPropertyQueryCallback
       // TODO(ishell): PropertyAttributes::ABSENT is not exposed in the Api,
       // so it can't be officially returned. We should fix the tests instead.
       if (value != PropertyAttributes::ABSENT ||
-          (value == PropertyAttributes::ABSENT &&
-           IsJSDeferredModuleNamespace(*holder))) {
+          (value == PropertyAttributes::ABSENT && interceptor->is_internal())) {
         args.AcceptSideEffects();
       }
       return Just(static_cast<PropertyAttributes>(value));
@@ -1928,16 +1928,18 @@ Maybe<bool> GetPropertyDescriptorWithInterceptor(LookupIterator* it,
   }
   // An exception was thrown in the interceptor. Propagate.
   RETURN_VALUE_IF_EXCEPTION_DETECTOR(isolate, args, Nothing<bool>());
-  // If it's a deferred module namespace, it needs to accept side-effect, since
-  // it will trigger module evaluation
-  if (IsJSDeferredModuleNamespace(*holder)) {
-    args.AcceptSideEffects();
-  }
-
   if (!result.is_null()) {
     // Request was successfully intercepted, try to set the property
     // descriptor.
     args.AcceptSideEffects();
+    // Some internal interceptors like
+    // JSDeferredModuleNamespace::NamedPropertyDescriptorCallback can actually
+    // intercept the call and trigger a module evaluation, but the property
+    // queried be absent. In such case the return is null.
+    if (interceptor->is_internal() && IsNull(*result)) {
+      it->Next();
+      return Just(false);
+    }
     bool is_descriptor =
         PropertyDescriptor::ToPropertyDescriptor(isolate, result, desc);
     return is_descriptor ? Just(true) : Nothing<bool>();
@@ -1961,13 +1963,14 @@ Maybe<bool> JSReceiver::GetOwnPropertyDescriptor(LookupIterator* it,
                                              it->GetName(), desc);
   }
 
-  Maybe<bool> intercepted = GetPropertyDescriptorWithInterceptor(it, desc);
-  MAYBE_RETURN(intercepted, Nothing<bool>());
-  if (intercepted.FromJust()) {
+  Maybe<bool> found_descriptor = GetPropertyDescriptorWithInterceptor(it, desc);
+  MAYBE_RETURN(found_descriptor, Nothing<bool>());
+  if (found_descriptor.FromJust()) {
     return Just(true);
   }
 
-  // Request was not intercepted, continue as normal.
+  // Request was not intercepted, or a descriptor was not found, continue as
+  // normal.
   // 1. (Assert)
   // 2. If O does not have an own property with key P, return undefined.
   Maybe<PropertyAttributes> maybe = JSObject::GetPropertyAttributes(it);

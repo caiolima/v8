@@ -488,6 +488,8 @@ enum class IsolateFieldId : uint8_t;
     "JSDeferredModuleNamespace::NamedPropertyQueryCallback")                   \
   V(js_deferred_module_namespace_named_descriptor_callback,                    \
     "JSDeferredModuleNamespace::NamedPropertyDescriptorCallback")              \
+  V(js_deferred_module_namespace_named_property_setter_callback,               \
+    "JSDeferredModuleNamespace::NamedPropertySetterCallback")                  \
   V(js_deferred_module_namespace_indexed_getter_callback,                      \
     "JSDeferredModuleNamespace::IndexedPropertyGetterCallback")                \
   V(js_deferred_module_namespace_indexed_deleter_callback,                     \
@@ -496,6 +498,8 @@ enum class IsolateFieldId : uint8_t;
     "JSDeferredModuleNamespace::IndexedPropertyQueryCallback")                 \
   V(js_deferred_module_namespace_indexed_descriptor_callback,                  \
     "JSDeferredModuleNamespace::IndexedPropertyDescriptorCallback")            \
+  V(js_deferred_module_namespace_indexed_property_setter_callback,             \
+    "JSDeferredModuleNamespace::IndexedPropertySetterCallback")                \
   EXTERNAL_REFERENCE_LIST_INTL(V)                                              \
   EXTERNAL_REFERENCE_LIST_SANDBOX(V)                                           \
   EXTERNAL_REFERENCE_LIST_LEAPTIERING(V)                                       \

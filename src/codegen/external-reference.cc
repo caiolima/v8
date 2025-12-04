@@ -1903,6 +1903,9 @@ RAW_FUNCTION_REFERENCE(js_deferred_module_namespace_named_query_callback,
 RAW_FUNCTION_REFERENCE(
     js_deferred_module_namespace_named_descriptor_callback,
     JSDeferredModuleNamespace::NamedPropertyDescriptorCallback)
+RAW_FUNCTION_REFERENCE(
+    js_deferred_module_namespace_named_property_setter_callback,
+    JSDeferredModuleNamespace::NamedPropertySetterCallback)
 RAW_FUNCTION_REFERENCE(js_deferred_module_namespace_indexed_getter_callback,
                        JSDeferredModuleNamespace::IndexedPropertyGetterCallback)
 RAW_FUNCTION_REFERENCE(
@@ -1913,6 +1916,9 @@ RAW_FUNCTION_REFERENCE(js_deferred_module_namespace_indexed_query_callback,
 RAW_FUNCTION_REFERENCE(
     js_deferred_module_namespace_indexed_descriptor_callback,
     JSDeferredModuleNamespace::IndexedPropertyDescriptorCallback)
+RAW_FUNCTION_REFERENCE(
+    js_deferred_module_namespace_indexed_property_setter_callback,
+    JSDeferredModuleNamespace::IndexedPropertySetterCallback)
 
 bool operator==(ExternalReference lhs, ExternalReference rhs) {
   return lhs.raw() == rhs.raw();

@@ -698,7 +698,7 @@ v8::Intercepted JSDeferredModuleNamespace::NamedPropertyDeleterCallback(
   if (isolate->has_exception()) {
     return v8::Intercepted::kYes;
   }
-  if (ns->HasExport(isolate, name)) {
+  if (info.ShouldThrowOnError() && ns->HasExport(isolate, name)) {
     isolate->Throw(*isolate->factory()->NewTypeError(
         MessageTemplate::kStrictCannotDeleteProperty, name, ns));
     return v8::Intercepted::kYes;
@@ -754,8 +754,8 @@ v8::Intercepted JSDeferredModuleNamespace::NamedPropertyDescriptorCallback(
       return v8::Intercepted::kYes;
     }
   }
-
-  return v8::Intercepted::kNo;
+  info.GetReturnValue().Set(Utils::ToLocal(isolate->factory()->null_value()));
+  return v8::Intercepted::kYes;
 }
 
 v8::Intercepted JSDeferredModuleNamespace::IndexedPropertyDescriptorCallback(
@@ -767,6 +767,24 @@ v8::Intercepted JSDeferredModuleNamespace::IndexedPropertyDescriptorCallback(
 
   // Reuse the named property descriptor callback
   return NamedPropertyDescriptorCallback(property, info);
+}
+
+v8::Intercepted JSDeferredModuleNamespace::NamedPropertySetterCallback(
+    v8::Local<v8::Name> property, v8::Local<v8::Value> value,
+    const v8::PropertyCallbackInfo<void>& info) {
+  info.GetReturnValue().Set(false);
+  return v8::Intercepted::kYes;
+}
+
+v8::Intercepted JSDeferredModuleNamespace::IndexedPropertySetterCallback(
+    uint32_t index, v8::Local<v8::Value> value,
+    const v8::PropertyCallbackInfo<void>& info) {
+  // Convert index to a v8::Local<v8::Name> using internal factory
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(info.GetIsolate());
+  DirectHandle<String> index_string = isolate->factory()->Uint32ToString(index);
+  v8::Local<v8::Name> property = Utils::ToLocal(index_string).As<v8::Name>();
+  // Reuse the named property setter callback
+  return NamedPropertySetterCallback(property, value, info);
 }
 
 }  // namespace internal

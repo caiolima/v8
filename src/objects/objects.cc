@@ -2322,20 +2322,12 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
         continue;  // Continue to the prototype, if present.
 
       case LookupIterator::INTERCEPTOR: {
-        DirectHandle<JSReceiver> holder = it->GetHolder<JSReceiver>();
-        if (IsJSDeferredModuleNamespace(*holder)) {
-          DirectHandle<JSDeferredModuleNamespace> ns =
-              Cast<JSDeferredModuleNamespace>(holder);
-          DirectHandle<Name> name = it->GetName();
-          if (it->HolderIsReceiverOrHiddenPrototype() && IsString(*name) &&
-              ns->HasExport(it->isolate(), Cast<String>(name))) {
-            return WriteToReadOnlyProperty(it, value, should_throw);
-          }
-
-          *found = false;
-          return Nothing<bool>();
-        }
-        if (it->HolderIsReceiverOrHiddenPrototype()) {
+        // For internal interceptors, we'd like to check [[Set]] even if holder
+        // != receiver. This is required to properly implement [[Set]] semantics
+        // for JSDeferredModuleNamespace, where no evaluation should happen on
+        // [[Set]].
+        if (it->HolderIsReceiverOrHiddenPrototype() ||
+            it->GetInterceptor()->is_internal()) {
           InterceptorResult result;
           if (!JSObject::SetPropertyWithInterceptor(it, should_throw, value)
                    .To(&result)) {
@@ -2346,11 +2338,16 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
             case InterceptorResult::kFalse: {
               // Throw TypeError if necessary in case the callback failed
               // to set the property.
-              Isolate* isolate = it->isolate();
-              RETURN_FAILURE(
-                  isolate, GetShouldThrow(isolate, should_throw),
-                  NewTypeError(MessageTemplate::kStrictCannotSetProperty,
-                               it->GetName(), it->GetReceiver()));
+              if (it->HolderIsReceiverOrHiddenPrototype()) {
+                Isolate* isolate = it->isolate();
+                RETURN_FAILURE(
+                    isolate, GetShouldThrow(isolate, should_throw),
+                    NewTypeError(MessageTemplate::kStrictCannotSetProperty,
+                                 it->GetName(), it->GetReceiver()));
+              }
+              DCHECK(it->GetInterceptor()->is_internal());
+              *found = false;
+              return Nothing<bool>();
             }
             case InterceptorResult::kTrue:
               return Just(true);

@@ -4571,10 +4571,10 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
     // Create a NamedInterceptorInfo
     DirectHandle<InterceptorInfo> named_interceptor_info =
         factory->NewInterceptorInfo();
+    named_interceptor_info->set_flags(InterceptorInfo::Flags(
+        InterceptorInfo::kNamed | InterceptorInfo::kIsInternal));
     named_interceptor_info->set_data(
         ReadOnlyRoots(isolate()).undefined_value());
-    named_interceptor_info->set_flags(
-        InterceptorInfo::Flags(InterceptorInfo::kNamed));
     named_interceptor_info->set_named_getter(
         isolate(),
         ExternalReference::js_deferred_module_namespace_named_getter_callback()
@@ -4591,12 +4591,19 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
         isolate(), ExternalReference::
                        js_deferred_module_namespace_named_descriptor_callback()
                            .address());
+    named_interceptor_info->set_named_setter(
+        isolate(),
+        ExternalReference::
+            js_deferred_module_namespace_named_property_setter_callback()
+                .address());
     FunctionTemplateInfo::SetNamedPropertyHandler(
         isolate(), function_template_info, named_interceptor_info);
 
     // Create Indexed Interceptor Info
     DirectHandle<InterceptorInfo> indexed_interceptor_info =
         factory->NewInterceptorInfo();
+    indexed_interceptor_info->set_flags(
+        InterceptorInfo::Flags(InterceptorInfo::kIsInternal));
     indexed_interceptor_info->set_data(
         ReadOnlyRoots(isolate()).undefined_value());
     indexed_interceptor_info->set_indexed_getter(
@@ -4615,6 +4622,11 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
         isolate(),
         ExternalReference::
             js_deferred_module_namespace_indexed_descriptor_callback()
+                .address());
+    indexed_interceptor_info->set_indexed_setter(
+        isolate(),
+        ExternalReference::
+            js_deferred_module_namespace_indexed_property_setter_callback()
                 .address());
     FunctionTemplateInfo::SetIndexedPropertyHandler(
         isolate(), function_template_info, indexed_interceptor_info);
