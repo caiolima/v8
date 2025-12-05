@@ -797,7 +797,13 @@
 # End roll-watcher patch
 ####
 
-
+####
+# import test262@dad2774b2eab2119cc8390ae65db4a5016de2dfe
+[ALWAYS, {
+  'language/import/import-defer/deferred-namespace-object/identity': [SKIP],
+}],
+# end import test262@dad2774b2eab2119cc8390ae65db4a5016de2dfe
+####
 
 ####
 # import test262@d49db639a89df9cc2b6c02554beb41acaec95c38
