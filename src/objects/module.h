@@ -181,8 +181,6 @@ class JSDeferredModuleNamespace
 
   static void EvaluateModuleSync(
       Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder);
-  static void MaybeEvaluate(Isolate* isolate,
-                            DirectHandle<JSDeferredModuleNamespace> ns);
   static bool TriggersEvaluation(Isolate* isolate,
                                  Tagged<JSDeferredModuleNamespace> holder,
                                  DirectHandle<Name> name);

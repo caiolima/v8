@@ -878,20 +878,17 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
       handler = MaybeObjectHandle(
           LoadHandler::LoadNonExistent(isolate(), lookup_start_object_map()));
     }
-  } else if (lookup->state() == LookupIterator::DEFERRED_MODULE_NAMESPACE) {
-    return;
-    // DirectHandle<JSDeferredModuleNamespace> holder =
-    //     lookup->GetHolder<JSDeferredModuleNamespace>();
-    // if (holder->module()->status() != Module::kEvaluated) {
-    //   // If the module wasn't evaluated yet, let's return and try to cache it
-    //   // later.
-    //   return;
-    // }
   } else if (IsLoadGlobalIC() && lookup->state() == LookupIterator::JSPROXY) {
     // If there is proxy just install the slow stub since we need to call the
     // HasProperty trap for global loads. The ProxyGetProperty builtin doesn't
     // handle this case.
     handler = MaybeObjectHandle(LoadHandler::LoadSlow(isolate()));
+  } else if (lookup->state() == LookupIterator::DEFERRED_MODULE_NAMESPACE) {
+    // While in DEFERRED_MODULE_NAMESPACE state, we can try to cache later.
+    // Once this deferred module gets evaluated (likelly this call), the access
+    // for this namespace object can be NOT_FOUND or ACCESSOR, which will allow
+    // them to be cached as ordinary module namespace access.
+    return;
   } else {
     if (IsLoadGlobalIC()) {
       if (lookup->TryLookupCachedProperty()) {
@@ -1003,33 +1000,6 @@ MaybeObjectHandle LoadIC::ComputeHandler(LookupIterator* lookup) {
           {},  // no data1 (make it use holder instead).
           MaybeObjectDirectHandle(interceptor_info));
       return MaybeObjectHandle(handler);
-    }
-
-    case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
-      UNREACHABLE();
-      // PrintF("Executed deferred module.\n");
-      // DirectHandle<JSDeferredModuleNamespace> holder =
-      //     lookup->GetHolder<JSDeferredModuleNamespace>();
-      // DCHECK(Cast<JSModuleNamespace>(holder)->module()->status() ==
-      //        Module::kEvaluated);
-      // DirectHandle<ObjectHashTable> exports(
-      //     Cast<JSModuleNamespace>(holder)->module()->exports(), isolate());
-      // InternalIndex entry =
-      //     exports->FindEntry(isolate(), roots, lookup->name(),
-      //                        Smi::ToInt(Object::GetHash(*lookup->name())));
-      // if (entry.is_found()) {
-      //   int value_index = ObjectHashTable::EntryToValueIndex(entry);
-      //   Handle<Smi> smi_handler =
-      //       LoadHandler::LoadModuleExport(isolate(), value_index);
-      //   if (holder_is_lookup_start_object) {
-      //     return MaybeObjectHandle(smi_handler);
-      //   }
-      //   return MaybeObjectHandle(LoadHandler::LoadFromPrototype(
-      //       isolate(), map, holder, *smi_handler));
-      // }
-      // TRACE_HANDLER_STATS(isolate(), LoadIC_LoadNonexistentDH);
-      // return MaybeObjectHandle(
-      //     LoadHandler::LoadNonExistent(isolate(), lookup_start_object_map()));
     }
 
     case LookupIterator::ACCESSOR: {
@@ -1256,6 +1226,7 @@ MaybeObjectHandle LoadIC::ComputeHandler(LookupIterator* lookup) {
           isolate(), map, holder_proxy, *smi_handler));
     }
 
+    case LookupIterator::DEFERRED_MODULE_NAMESPACE:
     case LookupIterator::WASM_OBJECT:
     case LookupIterator::ACCESS_CHECK:
     case LookupIterator::NOT_FOUND:

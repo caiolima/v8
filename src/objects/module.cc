@@ -340,19 +340,6 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
                                        &zone, &visited);
   }
 
-  // Create the namespace object (initially empty).
-  DirectHandle<JSModuleNamespace> ns =
-      phase == ModuleImportPhase::kEvaluation
-          ? isolate->factory()->NewJSModuleNamespace()
-          : isolate->factory()->NewJSDeferredModuleNamespace();
-  ns->set_module(*module);
-  if (phase == ModuleImportPhase::kEvaluation) {
-    module->set_module_namespace(*ns);
-  } else {
-    DCHECK(phase == ModuleImportPhase::kDefer);
-    module->set_deferred_module_namespace(*ns);
-  }
-
   DirectHandle<ObjectHashTable> exports(module->exports(), isolate);
   ZoneVector<IndirectHandle<String>> names(&zone);
   names.reserve(exports->NumberOfElements());
@@ -367,8 +354,21 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   std::sort(names.begin(), names.end(),
             [&isolate](IndirectHandle<String> a, IndirectHandle<String> b) {
               return String::Compare(isolate, a, b) ==
-                      ComparisonResult::kLessThan;
+                     ComparisonResult::kLessThan;
             });
+
+  // Create the namespace object (initially empty).
+  DirectHandle<JSModuleNamespace> ns =
+      phase == ModuleImportPhase::kEvaluation
+          ? isolate->factory()->NewJSModuleNamespace()
+          : isolate->factory()->NewJSDeferredModuleNamespace();
+  ns->set_module(*module);
+  if (phase == ModuleImportPhase::kEvaluation) {
+    module->set_module_namespace(*ns);
+  } else {
+    DCHECK(phase == ModuleImportPhase::kDefer);
+    module->set_deferred_module_namespace(*ns);
+  }
 
   // Create the properties in the namespace object. Transition the object
   // to dictionary mode so that property addition is faster.
@@ -492,15 +492,6 @@ void JSDeferredModuleNamespace::EvaluateModuleSync(
     return;
   }
   DCHECK_EQ(promise->status(), Promise::kFulfilled);
-}
-
-void JSDeferredModuleNamespace::MaybeEvaluate(
-    Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> ns) {
-  Handle<Module> module = handle(ns->module(), isolate);
-  if (module->status() == Module::kEvaluated) {
-    return;
-  }
-  JSDeferredModuleNamespace::EvaluateModuleSync(isolate, ns);
 }
 
 bool JSDeferredModuleNamespace::TriggersEvaluation(
