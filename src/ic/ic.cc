@@ -885,7 +885,7 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
     handler = MaybeObjectHandle(LoadHandler::LoadSlow(isolate()));
   } else if (lookup->state() == LookupIterator::DEFERRED_MODULE_NAMESPACE) {
     // While in DEFERRED_MODULE_NAMESPACE state, we can try to cache later.
-    // Once this deferred module gets evaluated (likelly this call), the access
+    // Once this deferred module gets evaluated (likely this call), the access
     // for this namespace object can be NOT_FOUND or ACCESSOR, which will allow
     // them to be cached as ordinary module namespace access.
     return;
