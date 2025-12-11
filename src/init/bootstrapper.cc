@@ -4551,7 +4551,6 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
         JS_DEFERRED_MODULE_NAMESPACE_TYPE, JSDeferredModuleNamespace::kSize,
         TERMINAL_FAST_ELEMENTS_KIND,
         JSDeferredModuleNamespace::kInObjectFieldCount);
-    map->set_is_extensible(false);
     map->SetConstructor(native_context()->object_function());
     Map::SetPrototype(isolate(), map, isolate_->factory()->null_value());
     Map::EnsureDescriptorSlack(isolate(), map, 1);

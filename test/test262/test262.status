@@ -799,8 +799,6 @@
 ####
 # import test262@d49db639a89df9cc2b6c02554beb41acaec95c38
 [ALWAYS, {
-  'language/import/import-defer/deferred-namespace-object/to-string-tag': [FAIL],
-
   'staging/sm/class/superCallOrder': [FAIL],
   'staging/sm/class/superPropOrdering': [FAIL],
   'staging/sm/DataView/detach-after-construction': [FAIL],

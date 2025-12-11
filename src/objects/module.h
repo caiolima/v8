@@ -183,7 +183,9 @@ class JSDeferredModuleNamespace
       Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder);
   static void MaybeEvaluate(Isolate* isolate,
                             DirectHandle<JSDeferredModuleNamespace> ns);
-  static bool TriggersEvaluation(Isolate* isolate, DirectHandle<Name> name);
+  static bool TriggersEvaluation(Isolate* isolate,
+                                 Tagged<JSDeferredModuleNamespace> holder,
+                                 DirectHandle<Name> name);
   static MaybeHandle<Object> GetProperty(
       Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder,
       DirectHandle<Name> name);

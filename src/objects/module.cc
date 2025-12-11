@@ -348,49 +348,50 @@ DirectHandle<JSModuleNamespace> Module::GetModuleNamespace(
   ns->set_module(*module);
   if (phase == ModuleImportPhase::kEvaluation) {
     module->set_module_namespace(*ns);
-    DirectHandle<ObjectHashTable> exports(module->exports(), isolate);
-    ZoneVector<IndirectHandle<String>> names(&zone);
-    names.reserve(exports->NumberOfElements());
-    for (InternalIndex i : exports->IterateEntries()) {
-      Tagged<Object> key;
-      if (!exports->ToKey(roots, i, &key)) continue;
-      names.push_back(handle(Cast<String>(key), isolate));
-    }
-    DCHECK_EQ(static_cast<int>(names.size()), exports->NumberOfElements());
-
-    // Sort them alphabetically.
-    std::sort(names.begin(), names.end(),
-              [&isolate](IndirectHandle<String> a, IndirectHandle<String> b) {
-                return String::Compare(isolate, a, b) ==
-                       ComparisonResult::kLessThan;
-              });
-
-    // Create the properties in the namespace object. Transition the object
-    // to dictionary mode so that property addition is faster.
-    PropertyAttributes attr = DONT_DELETE;
-    JSObject::NormalizeProperties(isolate, ns, CLEAR_INOBJECT_PROPERTIES,
-                                  static_cast<int>(names.size()),
-                                  "JSModuleNamespace");
-    JSObject::NormalizeElements(isolate, ns);
-    for (const auto& name : names) {
-      uint32_t index = 0;
-      if (name->AsArrayIndex(&index)) {
-        JSObject::SetNormalizedElement(
-            ns, index, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
-            PropertyDetails(PropertyKind::kAccessor, attr,
-                            PropertyCellType::kMutable));
-      } else {
-        JSObject::SetNormalizedProperty(
-            ns, name, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
-            PropertyDetails(PropertyKind::kAccessor, attr,
-                            PropertyCellType::kMutable));
-      }
-    }
-    JSObject::PreventExtensions(isolate, ns, kThrowOnError).ToChecked();
   } else {
     DCHECK(phase == ModuleImportPhase::kDefer);
     module->set_deferred_module_namespace(*ns);
   }
+
+  DirectHandle<ObjectHashTable> exports(module->exports(), isolate);
+  ZoneVector<IndirectHandle<String>> names(&zone);
+  names.reserve(exports->NumberOfElements());
+  for (InternalIndex i : exports->IterateEntries()) {
+    Tagged<Object> key;
+    if (!exports->ToKey(roots, i, &key)) continue;
+    names.push_back(handle(Cast<String>(key), isolate));
+  }
+  DCHECK_EQ(static_cast<int>(names.size()), exports->NumberOfElements());
+
+  // Sort them alphabetically.
+  std::sort(names.begin(), names.end(),
+            [&isolate](IndirectHandle<String> a, IndirectHandle<String> b) {
+              return String::Compare(isolate, a, b) ==
+                      ComparisonResult::kLessThan;
+            });
+
+  // Create the properties in the namespace object. Transition the object
+  // to dictionary mode so that property addition is faster.
+  PropertyAttributes attr = DONT_DELETE;
+  JSObject::NormalizeProperties(isolate, ns, CLEAR_INOBJECT_PROPERTIES,
+                                static_cast<int>(names.size()),
+                                "JSModuleNamespace");
+  JSObject::NormalizeElements(isolate, ns);
+  for (const auto& name : names) {
+    uint32_t index = 0;
+    if (name->AsArrayIndex(&index)) {
+      JSObject::SetNormalizedElement(
+          ns, index, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
+          PropertyDetails(PropertyKind::kAccessor, attr,
+                          PropertyCellType::kMutable));
+    } else {
+      JSObject::SetNormalizedProperty(
+          ns, name, Accessors::MakeModuleNamespaceEntryInfo(isolate, name),
+          PropertyDetails(PropertyKind::kAccessor, attr,
+                          PropertyCellType::kMutable));
+    }
+  }
+  JSObject::PreventExtensions(isolate, ns, kThrowOnError).ToChecked();
 
   // Optimize the namespace object as a prototype, for two reasons:
   // - The object's map is guaranteed not to be shared. ICs rely on this.
@@ -502,13 +503,13 @@ void JSDeferredModuleNamespace::MaybeEvaluate(
   JSDeferredModuleNamespace::EvaluateModuleSync(isolate, ns);
 }
 
-bool JSDeferredModuleNamespace::TriggersEvaluation(Isolate* isolate,
-                                                   DirectHandle<Name> name) {
-  if (Name::Equals(isolate, name, isolate->factory()->then_string()) ||
-      IsSymbol(*name)) {
+bool JSDeferredModuleNamespace::TriggersEvaluation(
+    Isolate* isolate, Tagged<JSDeferredModuleNamespace> holder,
+    DirectHandle<Name> name) {
+  if (*name == ReadOnlyRoots(isolate).then_string() || IsSymbol(*name)) {
     return false;
   }
-  return true;
+  return holder->module()->status() != Module::kEvaluated;
 }
 
 // ES
@@ -597,7 +598,7 @@ bool Module::IsGraphAsync(Isolate* isolate) const {
 MaybeHandle<Object> JSDeferredModuleNamespace::GetProperty(
     Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder,
     DirectHandle<Name> name) {
-  JSDeferredModuleNamespace::MaybeEvaluate(isolate, holder);
+  JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
   RETURN_EXCEPTION_IF_EXCEPTION(isolate);
   DirectHandle<Object> result;
   ASSIGN_RETURN_ON_EXCEPTION(isolate, result,

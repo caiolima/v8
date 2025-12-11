@@ -1330,7 +1330,8 @@ LookupIterator::State LookupIterator::LookupInSpecialHolder(
       }
       if (IsJSDeferredModuleNamespaceMap(map)) {
         if (!name_->IsPrivate() &&
-            JSDeferredModuleNamespace::TriggersEvaluation(isolate_, name_)) {
+            JSDeferredModuleNamespace::TriggersEvaluation(
+                isolate_, Cast<JSDeferredModuleNamespace>(holder), name_)) {
           return DEFERRED_MODULE_NAMESPACE;
         }
       }
