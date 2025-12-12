@@ -121,7 +121,6 @@ Tagged<Object> ObjectLookupAccessor(Isolate* isolate,
     switch (it.state()) {
       case LookupIterator::INTERCEPTOR:
       case LookupIterator::TRANSITION:
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
         UNREACHABLE();
 
       case LookupIterator::ACCESS_CHECK:
@@ -159,7 +158,20 @@ Tagged<Object> ObjectLookupAccessor(Isolate* isolate,
       case LookupIterator::DATA:
       case LookupIterator::NOT_FOUND:
         return ReadOnlyRoots(isolate).undefined_value();
-
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
+        // We need to trigger evaluation due to [[GetOwnProperty]].
+        // https://tc39.es/ecma262/#sec-object.prototype.__lookupGetter__
+        // https://tc39.es/ecma262/#sec-object.prototype.__lookupSetter__
+        Isolate* isolate = it.isolate();
+        JSDeferredModuleNamespace::EvaluateModuleSync(
+            it.isolate(), it.GetHolder<JSDeferredModuleNamespace>());
+        if (isolate->has_exception()) {
+          return isolate->exception();
+        }
+        // At this point, it's not possible to have an accessor for module
+        // namespaces, and there's no prototype as well, so we return undefined.
+        return ReadOnlyRoots(isolate).undefined_value();
+      }
       case LookupIterator::ACCESSOR: {
         DirectHandle<Object> maybe_pair = it.GetAccessors();
         if (IsAccessorPair(*maybe_pair)) {

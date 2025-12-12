@@ -101,7 +101,6 @@ namespace v8::internal {
 Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
   for (;; it->Next()) {
     switch (it->state()) {
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
@@ -127,6 +126,14 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         // TypedArray out-of-bounds access.
         return Just(false);
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
+        DirectHandle<JSDeferredModuleNamespace> holder =
+            it->GetHolder<JSDeferredModuleNamespace>();
+        JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
+        RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        return Just(
+            holder->HasExport(it->isolate(), Cast<String>(it->GetName())));
+      }
       case LookupIterator::ACCESSOR:
       case LookupIterator::DATA:
         return Just(true);
@@ -747,7 +754,6 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
     LookupIterator* it) {
   for (;; it->Next()) {
     switch (it->state()) {
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
@@ -767,6 +773,12 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
         return JSObject::GetPropertyAttributesWithFailedAccessCheck(it);
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return Just(ABSENT);
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
+        JSDeferredModuleNamespace::EvaluateModuleSync(
+            it->isolate(), it->GetHolder<JSDeferredModuleNamespace>());
+        RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        return JSModuleNamespace::GetPropertyAttributes(it);
+      }
       case LookupIterator::ACCESSOR:
         if (IsJSModuleNamespace(*it->GetHolder<Object>())) {
           return JSModuleNamespace::GetPropertyAttributes(it);
@@ -971,7 +983,6 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
 
   for (;; it->Next()) {
     switch (it->state()) {
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::JSPROXY:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
@@ -1016,6 +1027,25 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
       }
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return Just(true);
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
+        DirectHandle<JSDeferredModuleNamespace> holder =
+            it->GetHolder<JSDeferredModuleNamespace>();
+        JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
+        RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        if (!holder->HasExport(it->isolate(), Cast<String>(it->GetName()))) {
+          return Just(true);
+        }
+        // At this point it's a delete to an exported name and
+        // it's non-configurable.
+        // TODO(https://crbug.com/348660658): replace language mode
+        // parameter with Maybe<ShouldThrow> and use GetShouldThrow() here.
+        ShouldThrow should_throw =
+            is_sloppy(language_mode) ? kDontThrow : kThrowOnError;
+        RETURN_FAILURE(
+            isolate, should_throw,
+            NewTypeError(MessageTemplate::kStrictCannotDeleteProperty,
+                          it->GetName(), it->GetReceiver()));
+      }
       case LookupIterator::DATA:
       case LookupIterator::ACCESSOR: {
         DirectHandle<JSObject> holder = it->GetHolder<JSObject>();

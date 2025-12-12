@@ -20,3 +20,24 @@ assertEquals(0, globalThis.eval_list.length);
 assertEquals(undefined, ns.then);
 assertEquals(0, globalThis.eval_list.length);
 
+assertThrows(() => ns.foo = 30, TypeError);
+assertEquals(0, globalThis.eval_list.length);
+
+assertThrows(() => ns.nonExistent = 30, TypeError);
+assertEquals(0, globalThis.eval_list.length);
+
+assertThrows(() => ns[Symbol.toStringTag] = 30, TypeError);
+assertEquals(0, globalThis.eval_list.length);
+
+assertThrows(() => ns[Symbol('nonExistent')] = 30, TypeError);
+assertEquals(0, globalThis.eval_list.length);
+
+let obj = Object.create(ns);
+
+obj.foo = 40;
+assertEquals(0, globalThis.eval_list.length);
+assertEquals(40, obj.foo);
+
+obj.bar = 41;
+assertEquals(0, globalThis.eval_list.length);
+assertEquals(41, obj.bar);

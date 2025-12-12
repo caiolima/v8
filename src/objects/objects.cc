@@ -2439,7 +2439,20 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
         }
         return Object::SetSuperProperty(it, value, store_origin, should_throw);
       }
-
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
+        Isolate* isolate = it->isolate();
+        DirectHandle<JSDeferredModuleNamespace> holder =
+            it->GetHolder<JSDeferredModuleNamespace>();
+        if (it->HolderIsReceiverOrHiddenPrototype()) {
+          RETURN_FAILURE(
+            isolate, GetShouldThrow(isolate, should_throw),
+            NewTypeError(MessageTemplate::kStrictReadOnlyProperty,
+                         it->GetName(), i::Object::TypeOf(isolate, holder),
+                         holder));
+        }
+        *found = false;
+        return Nothing<bool>();
+      }
       case LookupIterator::ACCESSOR: {
         if (it->IsReadOnly()) {
           return WriteToReadOnlyProperty(it, value, should_throw);
@@ -2513,8 +2526,6 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
 
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         return WriteToReadOnlyProperty(it, value, should_throw);
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
-        UNREACHABLE();
     }
     UNREACHABLE();
   }

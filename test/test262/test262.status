@@ -790,7 +790,6 @@
 ####
 # import test262@dad2774b2eab2119cc8390ae65db4a5016de2dfe
 [ALWAYS, {
-  'language/import/import-defer/deferred-namespace-object/exotic-object-behavior': [SKIP],
   'language/import/import-defer/deferred-namespace-object/identity': [SKIP],
 }],
 # end import test262@dad2774b2eab2119cc8390ae65db4a5016de2dfe
@@ -856,34 +855,6 @@
 }],
 # End roll-watcher patch
 ####
-
-####
-# import test262@e7a84b0a090ca86cc05f2e90116115c8c2a7c059
-[ALWAYS, {
- 'language/import/import-defer/evaluation-triggers/ignore-exported-then-defineOwnProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/ignore-exported-then-delete': [SKIP],
- 'language/import/import-defer/evaluation-triggers/ignore-exported-then-getOwnProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/ignore-not-exported-then-defineOwnProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/ignore-not-exported-then-delete': [SKIP],
- 'language/import/import-defer/evaluation-triggers/ignore-not-exported-then-getOwnProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/ignore-set-string-exported': [SKIP],
- 'language/import/import-defer/evaluation-triggers/ignore-set-string-not-exported': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-exported-string-defineOwnProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-exported-string-delete': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-exported-string-getOwnProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-not-exported-string-defineOwnProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-not-exported-string-delete': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-not-exported-string-getOwnProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-ownPropertyKey-names': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys': [SKIP],
- 'language/import/import-defer/evaluation-triggers/trigger-ownPropertyKeys-symbols': [SKIP],
-}],
-# end import test262@e7a84b0a090ca86cc05f2e90116115c8c2a7c059
-###
 
 ####
 # import test262@bc5c14176e2b11a78859571eb693f028c8822458
@@ -1259,23 +1230,15 @@
 
 
 ####
-# import test262@c0cf527756840ae8ba679e53e627ec20f3bbc5c8
+# Roll-watcher patch
 [ALWAYS, {
-  'language/import/import-defer/evaluation-triggers/ignore-exported-then-get-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/ignore-exported-then-hasProperty-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/ignore-not-exported-then-get-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/ignore-not-exported-then-hasProperty-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/ignore-private-name-access': [SKIP],
-  'language/import/import-defer/evaluation-triggers/ignore-symbol-other-get-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/ignore-symbol-other-hasProperty-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-get-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/ignore-symbol-toStringTag-hasProperty-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/trigger-exported-string-get-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/trigger-exported-string-hasProperty-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/trigger-not-exported-string-get-in-prototype': [SKIP],
-  'language/import/import-defer/evaluation-triggers/trigger-not-exported-string-hasProperty-in-prototype': [SKIP],
+  'built-ins/Temporal/Duration/prototype/round/zero-duration': [SKIP],
+  'built-ins/Temporal/Duration/prototype/total/precision-exact-mathematical-values-5': [SKIP],
+  'intl402/Temporal/PlainDate/prototype/withCalendar/calendar-time-string': [SKIP],
+  'intl402/Temporal/PlainDateTime/prototype/withCalendar/calendar-time-string': [SKIP],
+  'intl402/Temporal/ZonedDateTime/prototype/withCalendar/calendar-time-string': [SKIP],
 }],
-# end import test262@c0cf527756840ae8ba679e53e627ec20f3bbc5c8
+# End roll-watcher patch
 ####
 
 

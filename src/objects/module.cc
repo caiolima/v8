@@ -437,7 +437,8 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
     LookupIterator* it) {
   DirectHandle<JSModuleNamespace> object = it->GetHolder<JSModuleNamespace>();
   DirectHandle<String> name = Cast<String>(it->GetName());
-  DCHECK_EQ(it->state(), LookupIterator::ACCESSOR);
+  DCHECK(it->state() == LookupIterator::ACCESSOR ||
+         it->state() == LookupIterator::DEFERRED_MODULE_NAMESPACE);
 
   Isolate* isolate = it->isolate();
 
@@ -452,7 +453,11 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
     return Nothing<PropertyAttributes>();
   }
 
-  return Just(it->property_attributes());
+  if (it->state() == LookupIterator::ACCESSOR) {
+    return Just(it->property_attributes());
+  } else {
+    return Just(DONT_DELETE);
+  }
 }
 
 // https://tc39.es/proposal-defer-import-eval/#sec-EvaluateModuleSync
