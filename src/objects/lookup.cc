@@ -1329,7 +1329,7 @@ LookupIterator::State LookupIterator::LookupInSpecialHolder(
         if (is_element || !name_->IsAnyPrivate()) return JSPROXY;
       }
       if (IsJSDeferredModuleNamespaceMap(map)) {
-        if (!name_->IsPrivate() &&
+        if (!name_->IsAnyPrivate() &&
             JSDeferredModuleNamespace::TriggersEvaluation(
                 isolate_, Cast<JSDeferredModuleNamespace>(holder), name_)) {
           return DEFERRED_MODULE_NAMESPACE;

@@ -75,6 +75,11 @@ MaybeDirectHandle<Object> HasEnumerableProperty(
           return it.GetName();
         }
       }
+      // When HasEnumerableProperty gets called in ForInHasProperty, a
+      // deferred module needs to be evaluated because of [[OwnPropertyKeys]]
+      // that is executed to collect all names of the object. At this point,
+      // we should never reach DEFERRED_MODULE_NAMESPACE state.
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
       case LookupIterator::WASM_OBJECT:
@@ -95,11 +100,6 @@ MaybeDirectHandle<Object> HasEnumerableProperty(
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         // TypedArray out-of-bounds access.
         return isolate->factory()->undefined_value();
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
-        JSDeferredModuleNamespace::EvaluateModuleSync(
-            it.isolate(), it.GetHolder<JSDeferredModuleNamespace>());
-        RETURN_EXCEPTION_IF_EXCEPTION(it.isolate());
-        [[fallthrough]];
       case LookupIterator::ACCESSOR: {
         if (IsJSModuleNamespace(*it.GetHolder<Object>())) {
           result = JSModuleNamespace::GetPropertyAttributes(&it);

@@ -591,16 +591,5 @@ bool Module::IsGraphAsync(Isolate* isolate) const {
   return false;
 }
 
-MaybeHandle<Object> JSDeferredModuleNamespace::GetProperty(
-    Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder,
-    DirectHandle<Name> name) {
-  JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
-  RETURN_EXCEPTION_IF_EXCEPTION(isolate);
-  DirectHandle<Object> result;
-  ASSIGN_RETURN_ON_EXCEPTION(isolate, result,
-                             holder->GetExport(isolate, Cast<String>(name)));
-  return Handle<Object>(*result, isolate);
-}
-
 }  // namespace internal
 }  // namespace v8

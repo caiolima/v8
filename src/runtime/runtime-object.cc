@@ -256,9 +256,9 @@ RUNTIME_FUNCTION(Runtime_HasOwnConstDataProperty) {
       case LookupIterator::WASM_OBJECT:
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
       case LookupIterator::ACCESSOR:
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
         return ReadOnlyRoots(isolate).undefined_value();
 
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
     }

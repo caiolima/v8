@@ -162,9 +162,8 @@ Tagged<Object> ObjectLookupAccessor(Isolate* isolate,
         // We need to trigger evaluation due to [[GetOwnProperty]].
         // https://tc39.es/ecma262/#sec-object.prototype.__lookupGetter__
         // https://tc39.es/ecma262/#sec-object.prototype.__lookupSetter__
-        Isolate* isolate = it.isolate();
         JSDeferredModuleNamespace::EvaluateModuleSync(
-            it.isolate(), it.GetHolder<JSDeferredModuleNamespace>());
+            isolate, it.GetHolder<JSDeferredModuleNamespace>());
         if (isolate->has_exception()) {
           return isolate->exception();
         }

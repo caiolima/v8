@@ -1331,10 +1331,18 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
       case LookupIterator::ACCESS_CHECK:
         if (it->HasAccess()) continue;
         return JSObject::GetPropertyWithFailedAccessCheck(it);
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
-        return JSDeferredModuleNamespace::GetProperty(
-            it->isolate(), it->GetHolder<JSDeferredModuleNamespace>(),
-            it->GetName());
+      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
+        Isolate* isolate = it->isolate();
+        DirectHandle<JSDeferredModuleNamespace> holder =
+            it->GetHolder<JSDeferredModuleNamespace>();
+        DirectHandle<Name> name = it->GetName();
+        JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
+        RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+        DirectHandle<Object> result;
+        ASSIGN_RETURN_ON_EXCEPTION(
+            isolate, result, holder->GetExport(isolate, Cast<String>(name)));
+        return Handle<Object>(*result, isolate);
+      }
       case LookupIterator::ACCESSOR:
         return GetPropertyWithAccessor(it);
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
@@ -2445,10 +2453,10 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
             it->GetHolder<JSDeferredModuleNamespace>();
         if (it->HolderIsReceiverOrHiddenPrototype()) {
           RETURN_FAILURE(
-            isolate, GetShouldThrow(isolate, should_throw),
-            NewTypeError(MessageTemplate::kStrictReadOnlyProperty,
-                         it->GetName(), i::Object::TypeOf(isolate, holder),
-                         holder));
+              isolate, GetShouldThrow(isolate, should_throw),
+              NewTypeError(MessageTemplate::kStrictReadOnlyProperty,
+                           it->GetName(), i::Object::TypeOf(isolate, holder),
+                           holder));
         }
         *found = false;
         return Nothing<bool>();

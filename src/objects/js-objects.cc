@@ -1044,7 +1044,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
         RETURN_FAILURE(
             isolate, should_throw,
             NewTypeError(MessageTemplate::kStrictCannotDeleteProperty,
-                          it->GetName(), it->GetReceiver()));
+                         it->GetName(), it->GetReceiver()));
       }
       case LookupIterator::DATA:
       case LookupIterator::ACCESSOR: {

@@ -184,9 +184,6 @@ class JSDeferredModuleNamespace
   static bool TriggersEvaluation(Isolate* isolate,
                                  Tagged<JSDeferredModuleNamespace> holder,
                                  DirectHandle<Name> name);
-  static MaybeHandle<Object> GetProperty(
-      Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder,
-      DirectHandle<Name> name);
 
   // We need to include in-object fields
   // TODO(v8:8944): improve handling of in-object fields
