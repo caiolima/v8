@@ -999,7 +999,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
             Nothing<bool>());
         UNREACHABLE();
       case LookupIterator::INTERCEPTOR: {
-        // TODO(https://crbug.com/348660658): replace language mode
+        // TODO(348660658): replace language mode
         // parameter with Maybe<ShouldThrow> and use GetShouldThrow() here.
         ShouldThrow should_throw =
             is_sloppy(language_mode) ? kDontThrow : kThrowOnError;
@@ -1039,7 +1039,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
         }
         // At this point it's a delete to an exported name and
         // it's non-configurable.
-        // TODO(https://crbug.com/348660658): replace language mode
+        // TODO(348660658): replace language mode
         // parameter with Maybe<ShouldThrow> and use GetShouldThrow() here.
         ShouldThrow should_throw =
             is_sloppy(language_mode) ? kDontThrow : kThrowOnError;
@@ -1053,7 +1053,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
         DirectHandle<JSObject> holder = it->GetHolder<JSObject>();
         if (!it->IsConfigurable() ||
             (IsJSTypedArray(*holder) && it->IsElement(*holder))) {
-          // TODO(https://crbug.com/348660658): replace language mode
+          // TODO(348660658): replace language mode
           // parameter with Maybe<ShouldThrow> and use GetShouldThrow() here.
           ShouldThrow should_throw =
               is_sloppy(language_mode) ? kDontThrow : kThrowOnError;
