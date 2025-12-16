@@ -10,6 +10,8 @@ import defer * as ns from './modules-skip-import-defer-1.mjs';
 
 assertEquals(0, globalThis.eval_list.length);
 
-assertTrue(Object.hasOwn(ns, 'foo'));
+assertTrue(Object.prototype.propertyIsEnumerable.call(ns, 'foo'));
 assertArrayEquals(['defer-1'], globalThis.eval_list);
 
+assertFalse(Object.prototype.propertyIsEnumerable.call(ns, 'non-existent'));
+assertArrayEquals(['defer-1'], globalThis.eval_list);

@@ -10,6 +10,6 @@ import defer * as ns from './modules-skip-import-defer-1.mjs';
 
 assertEquals(0, globalThis.eval_list.length);
 
-assertEquals(false, Object.hasOwn(ns, 'non-existent'));
+assertFalse(Object.hasOwn(ns, 'non-existent'));
 assertArrayEquals(['defer-1'], globalThis.eval_list);
 

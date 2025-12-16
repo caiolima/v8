@@ -77,8 +77,7 @@ MaybeDirectHandle<Object> HasEnumerableProperty(
       }
       // When HasEnumerableProperty gets called in ForInHasProperty, a
       // deferred module needs to be evaluated because of [[OwnPropertyKeys]]
-      // that is executed to collect all names of the object. At this point,
-      // we should never reach DEFERRED_MODULE_NAMESPACE state.
+      // is executed to collect all names of the object.
       case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
