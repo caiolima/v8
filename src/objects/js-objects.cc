@@ -131,8 +131,8 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
             it->GetHolder<JSDeferredModuleNamespace>();
         JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
         RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        return Just(
-            holder->HasExport(it->isolate(), Cast<String>(it->GetName())));
+        DirectHandle<Name> name = it->GetName();
+        return Just(holder->HasExport(it->isolate(), Cast<String>(name)));
       }
       case LookupIterator::ACCESSOR:
       case LookupIterator::DATA:
@@ -774,8 +774,9 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return Just(ABSENT);
       case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
-        JSDeferredModuleNamespace::EvaluateModuleSync(
-            it->isolate(), it->GetHolder<JSDeferredModuleNamespace>());
+        DirectHandle<JSDeferredModuleNamespace> holder =
+            it->GetHolder<JSDeferredModuleNamespace>();
+        JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
         RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
         return JSModuleNamespace::GetPropertyAttributes(it);
       }
@@ -1032,7 +1033,8 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
             it->GetHolder<JSDeferredModuleNamespace>();
         JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
         RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        if (!holder->HasExport(it->isolate(), Cast<String>(it->GetName()))) {
+        DirectHandle<Name> name = it->GetName();
+        if (!holder->HasExport(it->isolate(), Cast<String>(name))) {
           return Just(true);
         }
         // At this point it's a delete to an exported name and
