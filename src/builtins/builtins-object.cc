@@ -165,9 +165,7 @@ Tagged<Object> ObjectLookupAccessor(Isolate* isolate,
         DirectHandle<JSDeferredModuleNamespace> holder =
             it.GetHolder<JSDeferredModuleNamespace>();
         JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
-        if (isolate->has_exception()) {
-          return isolate->exception();
-        }
+        RETURN_FAILURE_IF_EXCEPTION(isolate);
         // At this point, it's not possible to have an accessor for module
         // namespaces, and there's no prototype as well, so we return undefined.
         return ReadOnlyRoots(isolate).undefined_value();

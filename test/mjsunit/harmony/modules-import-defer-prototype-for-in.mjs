@@ -11,7 +11,6 @@ import defer * as ns from './modules-skip-import-defer-1.mjs';
 assertEquals(0, globalThis.eval_list.length);
 
 let obj = Object.create(ns);
-obj.bar = 0;
 
 let propList = [];
 for (let prop in obj) {
@@ -19,4 +18,4 @@ for (let prop in obj) {
 }
 
 assertArrayEquals(['defer-1'], globalThis.eval_list);
-assertArrayEquals(['bar', 'foo'], propList);
+assertArrayEquals(['foo'], propList);

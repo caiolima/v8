@@ -499,6 +499,7 @@ void JSDeferredModuleNamespace::EvaluateModuleSync(
   DCHECK_EQ(promise->status(), Promise::kFulfilled);
 }
 
+// https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
 bool JSDeferredModuleNamespace::TriggersEvaluation(
     Isolate* isolate, Tagged<JSDeferredModuleNamespace> holder,
     DirectHandle<Name> name) {

@@ -2449,17 +2449,9 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
       }
       case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
         Isolate* isolate = it->isolate();
-        DirectHandle<JSDeferredModuleNamespace> holder =
-            it->GetHolder<JSDeferredModuleNamespace>();
-        if (it->HolderIsReceiverOrHiddenPrototype()) {
-          RETURN_FAILURE(
-              isolate, GetShouldThrow(isolate, should_throw),
-              NewTypeError(MessageTemplate::kStrictReadOnlyProperty,
-                           it->GetName(), i::Object::TypeOf(isolate, holder),
-                           holder));
-        }
-        *found = false;
-        return Nothing<bool>();
+        RETURN_FAILURE(isolate, GetShouldThrow(isolate, should_throw),
+                       NewTypeError(MessageTemplate::kStrictCannotSetProperty,
+                                    it->GetName(), it->GetReceiver()));
       }
       case LookupIterator::ACCESSOR: {
         if (it->IsReadOnly()) {
@@ -2527,7 +2519,16 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
           return SetDataProperty(it, value);
         }
         [[fallthrough]];
-      case LookupIterator::NOT_FOUND:
+      case LookupIterator::NOT_FOUND: {
+        Isolate* isolate = it->isolate();
+        DirectHandle<JSReceiver> holder = it->GetCurrentHolder();
+        if (IsJSModuleNamespace(*holder)) [[unlikely]] {
+          RETURN_FAILURE(isolate, GetShouldThrow(isolate, should_throw),
+                         NewTypeError(MessageTemplate::kStrictCannotSetProperty,
+                                      it->GetName(), it->GetReceiver()));
+        }
+        [[fallthrough]];
+      }
       case LookupIterator::TRANSITION:
         *found = false;
         return Nothing<bool>();
