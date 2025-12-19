@@ -164,7 +164,7 @@ Tagged<Object> ObjectLookupAccessor(Isolate* isolate,
         // https://tc39.es/ecma262/#sec-object.prototype.__lookupSetter__
         if (JSDeferredModuleNamespace::TriggersEvaluation(&it)) {
           DirectHandle<JSDeferredModuleNamespace> holder =
-            it.GetHolder<JSDeferredModuleNamespace>();
+              it.GetHolder<JSDeferredModuleNamespace>();
           JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
           RETURN_FAILURE_IF_EXCEPTION(isolate);
           return ReadOnlyRoots(isolate).undefined_value();

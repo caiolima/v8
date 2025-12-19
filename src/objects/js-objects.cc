@@ -129,7 +129,7 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
       case LookupIterator::MODULE_NAMESPACE: {
         if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
           DirectHandle<JSDeferredModuleNamespace> holder =
-            it->GetHolder<JSDeferredModuleNamespace>();
+              it->GetHolder<JSDeferredModuleNamespace>();
           JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
           RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
         }
@@ -778,7 +778,7 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
       case LookupIterator::MODULE_NAMESPACE: {
         if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
           DirectHandle<JSDeferredModuleNamespace> holder =
-            it->GetHolder<JSDeferredModuleNamespace>();
+              it->GetHolder<JSDeferredModuleNamespace>();
           JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
         }
         continue;
@@ -1034,7 +1034,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
       case LookupIterator::MODULE_NAMESPACE: {
         if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
           DirectHandle<JSDeferredModuleNamespace> holder =
-            it->GetHolder<JSDeferredModuleNamespace>();
+              it->GetHolder<JSDeferredModuleNamespace>();
           JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
           RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
         }

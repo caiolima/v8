@@ -897,11 +897,11 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
     // (likely this call), the access for this namespace object can be NOT_FOUND
     // or ACCESSOR, which will allow them to be cached as ordinary module
     // namespace access.
-  #ifdef DEBUG
+#ifdef DEBUG
     DirectHandle<JSModuleNamespace> ns = lookup->GetHolder<JSModuleNamespace>();
     DCHECK(IsJSDeferredModuleNamespace(*ns));
     DCHECK(ns->module()->status() != Module::kEvaluated);
-  #endif
+#endif
     return;
   } else {
     if (IsLoadGlobalIC()) {
