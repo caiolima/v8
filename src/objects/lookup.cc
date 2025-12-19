@@ -75,7 +75,6 @@ template void LookupIterator::Start<false>();
 
 void LookupIterator::Next() {
   DCHECK_NE(JSPROXY, state_);
-  DCHECK_NE(DEFERRED_MODULE_NAMESPACE, state_);
   DCHECK_NE(TRANSITION, state_);
   DCHECK_NE(NOT_FOUND, state_);
   DisallowGarbageCollection no_gc;
@@ -928,7 +927,7 @@ bool LookupIterator::HolderIsReceiver() const {
   DCHECK_NE(state_, STRING_LOOKUP_START_OBJECT);
   DCHECK(has_property_ || state_ == INTERCEPTOR || state_ == JSPROXY ||
          state_ == TYPED_ARRAY_INDEX_NOT_FOUND ||
-         state_ == DEFERRED_MODULE_NAMESPACE);
+         state_ == MODULE_NAMESPACE);
   // Optimization that only works if configuration_ is not mutable.
   if (!check_prototype_chain()) return true;
   return *receiver_ == *holder_;
@@ -937,7 +936,7 @@ bool LookupIterator::HolderIsReceiver() const {
 bool LookupIterator::HolderIsReceiverOrHiddenPrototype() const {
   DCHECK_NE(state_, STRING_LOOKUP_START_OBJECT);
   DCHECK(has_property_ || state_ == INTERCEPTOR || state_ == JSPROXY ||
-         state_ == DEFERRED_MODULE_NAMESPACE);
+         state_ == MODULE_NAMESPACE);
   // Optimization that only works if configuration_ is not mutable.
   if (!check_prototype_chain()) return true;
   if (*receiver_ == *holder_) return true;
@@ -1328,12 +1327,8 @@ LookupIterator::State LookupIterator::LookupInSpecialHolder(
       if (IsJSProxyMap(map)) {
         if (is_element || !name_->IsAnyPrivate()) return JSPROXY;
       }
-      if (IsJSDeferredModuleNamespaceMap(map)) {
-        if (!name_->IsAnyPrivate() &&
-            JSDeferredModuleNamespace::TriggersEvaluation(
-                isolate_, Cast<JSDeferredModuleNamespace>(holder), name_)) {
-          return DEFERRED_MODULE_NAMESPACE;
-        }
+      if (!name_->IsAnyPrivate() && IsJSModuleNamespaceMap(map)) {
+        return MODULE_NAMESPACE;
       }
 #if V8_ENABLE_WEBASSEMBLY
       if (IsWasmObjectMap(map)) return WASM_OBJECT;
@@ -1368,12 +1363,13 @@ LookupIterator::State LookupIterator::LookupInSpecialHolder(
             return ACCESSOR;
         }
       }
+      [[fallthrough]];
+    case MODULE_NAMESPACE:
       return LookupInRegularHolder<is_element>(map, holder);
     case ACCESSOR:
     case DATA:
     case WASM_OBJECT:
       return NOT_FOUND;
-    case DEFERRED_MODULE_NAMESPACE:
     case TYPED_ARRAY_INDEX_NOT_FOUND:
     case JSPROXY:
     case TRANSITION:

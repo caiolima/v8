@@ -126,13 +126,16 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         // TypedArray out-of-bounds access.
         return Just(false);
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
-        DirectHandle<JSDeferredModuleNamespace> holder =
+      case LookupIterator::MODULE_NAMESPACE: {
+        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
+          DirectHandle<JSDeferredModuleNamespace> holder =
             it->GetHolder<JSDeferredModuleNamespace>();
-        JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
-        RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        DirectHandle<Name> name = it->GetName();
-        return Just(holder->HasExport(it->isolate(), Cast<String>(name)));
+          JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+          DirectHandle<Name> name = it->GetName();
+          return Just(holder->HasExport(it->isolate(), Cast<String>(name)));
+        }
+        continue;
       }
       case LookupIterator::ACCESSOR:
       case LookupIterator::DATA:
@@ -178,7 +181,8 @@ Handle<Object> JSReceiver::GetDataProperty(LookupIterator* it,
         // access to access-checked objects in that case.
         if (!it->isolate()->context().is_null() && it->HasAccess()) continue;
         [[fallthrough]];
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
+      case LookupIterator::MODULE_NAMESPACE:
+        continue;
       case LookupIterator::JSPROXY:
         it->NotFound();
         return it->isolate()->factory()->undefined_value();
@@ -239,7 +243,7 @@ Maybe<bool> JSReceiver::CheckPrivateNameStore(LookupIterator* it,
       Cast<String>(Cast<Symbol>(it->GetName())->description()), isolate);
   for (;; it->Next()) {
     switch (it->state()) {
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
+      case LookupIterator::MODULE_NAMESPACE:
       case LookupIterator::TRANSITION:
       case LookupIterator::INTERCEPTOR:
       case LookupIterator::JSPROXY:
@@ -773,12 +777,15 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
         return JSObject::GetPropertyAttributesWithFailedAccessCheck(it);
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return Just(ABSENT);
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
-        DirectHandle<JSDeferredModuleNamespace> holder =
+      case LookupIterator::MODULE_NAMESPACE: {
+        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
+          DirectHandle<JSDeferredModuleNamespace> holder =
             it->GetHolder<JSDeferredModuleNamespace>();
-        JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
-        RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        return JSModuleNamespace::GetPropertyAttributes(it);
+          JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+          return JSModuleNamespace::GetPropertyAttributes(it);
+        }
+        continue;
       }
       case LookupIterator::ACCESSOR:
         if (IsJSModuleNamespace(*it->GetHolder<Object>())) {
@@ -1028,25 +1035,28 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
       }
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return Just(true);
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
-        DirectHandle<JSDeferredModuleNamespace> holder =
+      case LookupIterator::MODULE_NAMESPACE: {
+        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
+          DirectHandle<JSDeferredModuleNamespace> holder =
             it->GetHolder<JSDeferredModuleNamespace>();
-        JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
-        RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-        DirectHandle<Name> name = it->GetName();
-        if (!holder->HasExport(it->isolate(), Cast<String>(name))) {
-          return Just(true);
+          JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+          DirectHandle<Name> name = it->GetName();
+          if (!holder->HasExport(it->isolate(), Cast<String>(name))) {
+            return Just(true);
+          }
+          // At this point it's a delete to an exported name and
+          // it's non-configurable.
+          // TODO(348660658): replace language mode
+          // parameter with Maybe<ShouldThrow> and use GetShouldThrow() here.
+          ShouldThrow should_throw =
+              is_sloppy(language_mode) ? kDontThrow : kThrowOnError;
+          RETURN_FAILURE(
+              isolate, should_throw,
+              NewTypeError(MessageTemplate::kStrictCannotDeleteProperty,
+                          it->GetName(), it->GetReceiver()));
         }
-        // At this point it's a delete to an exported name and
-        // it's non-configurable.
-        // TODO(348660658): replace language mode
-        // parameter with Maybe<ShouldThrow> and use GetShouldThrow() here.
-        ShouldThrow should_throw =
-            is_sloppy(language_mode) ? kDontThrow : kThrowOnError;
-        RETURN_FAILURE(
-            isolate, should_throw,
-            NewTypeError(MessageTemplate::kStrictCannotDeleteProperty,
-                         it->GetName(), it->GetReceiver()));
+        continue;
       }
       case LookupIterator::DATA:
       case LookupIterator::ACCESSOR: {
@@ -1882,7 +1892,7 @@ Maybe<bool> JSReceiver::AddPrivateField(LookupIterator* it,
     case LookupIterator::WASM_OBJECT:
       RETURN_FAILURE(isolate, kThrowOnError,
                      NewTypeError(MessageTemplate::kWasmObjectsAreOpaque));
-    case LookupIterator::DEFERRED_MODULE_NAMESPACE:
+    case LookupIterator::MODULE_NAMESPACE:
     case LookupIterator::DATA:
     case LookupIterator::INTERCEPTOR:
     case LookupIterator::ACCESSOR:
@@ -3759,11 +3769,11 @@ Maybe<bool> JSObject::DefineOwnPropertyIgnoreAttributes(
 
   for (;; it->Next()) {
     switch (it->state()) {
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
       case LookupIterator::JSPROXY:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();
+      case LookupIterator::MODULE_NAMESPACE:
       case LookupIterator::WASM_OBJECT:
         continue;  // {AddDataProperty} will throw if no other case is hit.
 

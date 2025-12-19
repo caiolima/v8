@@ -438,7 +438,7 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
   DirectHandle<JSModuleNamespace> object = it->GetHolder<JSModuleNamespace>();
   DirectHandle<String> name = Cast<String>(it->GetName());
   DCHECK(it->state() == LookupIterator::ACCESSOR ||
-         it->state() == LookupIterator::DEFERRED_MODULE_NAMESPACE);
+         it->state() == LookupIterator::MODULE_NAMESPACE);
 
   Isolate* isolate = it->isolate();
 
@@ -453,7 +453,7 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
     return Nothing<PropertyAttributes>();
   }
 
-  if (it->state() == LookupIterator::ACCESSOR) {
+  if (IsJSDeferredModuleNamespace(*object)) {
     return Just(it->property_attributes());
   } else {
     return Just(DONT_DELETE);
@@ -499,14 +499,19 @@ void JSDeferredModuleNamespace::EvaluateModuleSync(
   DCHECK_EQ(promise->status(), Promise::kFulfilled);
 }
 
-// https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
-bool JSDeferredModuleNamespace::TriggersEvaluation(
-    Isolate* isolate, Tagged<JSDeferredModuleNamespace> holder,
-    DirectHandle<Name> name) {
-  if (*name == ReadOnlyRoots(isolate).then_string() || IsSymbol(*name)) {
-    return false;
+bool JSDeferredModuleNamespace::TriggersEvaluation(LookupIterator* it) {
+  DirectHandle<JSModuleNamespace> ns = it->GetHolder<JSModuleNamespace>();
+  if (IsJSDeferredModuleNamespace(*ns)) {
+    Isolate* isolate = it->isolate();
+    DirectHandle<Name> name = it->GetName();
+    // https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
+    if (*name == ReadOnlyRoots(isolate).then_string() || IsSymbol(*name)) {
+      return false;
+    }
+    return ns->module()->status() != Module::kEvaluated;
   }
-  return holder->module()->status() != Module::kEvaluated;
+
+  return false;
 }
 
 // ES

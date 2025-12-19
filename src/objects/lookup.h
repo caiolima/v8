@@ -101,7 +101,7 @@ class V8_EXPORT_PRIVATE LookupIterator final {
     WASM_OBJECT,
     // The property is being accessed to a deferred module namespace and we need
     // to trigger evaluation of this module in some accesses.
-    DEFERRED_MODULE_NAMESPACE,
+    MODULE_NAMESPACE,
 
     // A LookupIterator in the transition state is in the middle of performing
     // a data transition (that is, as part of a data property write, updating

@@ -181,9 +181,7 @@ class JSDeferredModuleNamespace
 
   static void EvaluateModuleSync(
       Isolate* isolate, DirectHandle<JSDeferredModuleNamespace> holder);
-  static bool TriggersEvaluation(Isolate* isolate,
-                                 Tagged<JSDeferredModuleNamespace> holder,
-                                 DirectHandle<Name> name);
+  static bool TriggersEvaluation(LookupIterator* it);
 
   // We need to include in-object fields
   // TODO(v8:8944): improve handling of in-object fields

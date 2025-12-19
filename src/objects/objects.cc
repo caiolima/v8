@@ -1331,17 +1331,20 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
       case LookupIterator::ACCESS_CHECK:
         if (it->HasAccess()) continue;
         return JSObject::GetPropertyWithFailedAccessCheck(it);
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
-        Isolate* isolate = it->isolate();
-        DirectHandle<JSDeferredModuleNamespace> holder =
-            it->GetHolder<JSDeferredModuleNamespace>();
-        DirectHandle<Name> name = it->GetName();
-        JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
-        RETURN_EXCEPTION_IF_EXCEPTION(isolate);
-        DirectHandle<Object> result;
-        ASSIGN_RETURN_ON_EXCEPTION(
-            isolate, result, holder->GetExport(isolate, Cast<String>(name)));
-        return Handle<Object>(*result, isolate);
+      case LookupIterator::MODULE_NAMESPACE: {
+        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
+          Isolate* isolate = it->isolate();
+          DirectHandle<JSDeferredModuleNamespace> holder =
+              it->GetHolder<JSDeferredModuleNamespace>();
+          DirectHandle<Name> name = it->GetName();
+          JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
+          RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+          DirectHandle<Object> result;
+          ASSIGN_RETURN_ON_EXCEPTION(
+              isolate, result, holder->GetExport(isolate, Cast<String>(name)));
+          return Handle<Object>(*result, isolate);
+        }
+        continue;
       }
       case LookupIterator::ACCESSOR:
         return GetPropertyWithAccessor(it);
@@ -2447,7 +2450,7 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
         }
         return Object::SetSuperProperty(it, value, store_origin, should_throw);
       }
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE: {
+      case LookupIterator::MODULE_NAMESPACE: {
         Isolate* isolate = it->isolate();
         RETURN_FAILURE(isolate, GetShouldThrow(isolate, should_throw),
                        NewTypeError(MessageTemplate::kStrictCannotSetProperty,
@@ -2519,16 +2522,7 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
           return SetDataProperty(it, value);
         }
         [[fallthrough]];
-      case LookupIterator::NOT_FOUND: {
-        Isolate* isolate = it->isolate();
-        DirectHandle<JSReceiver> holder = it->GetCurrentHolder();
-        if (IsJSModuleNamespace(*holder)) [[unlikely]] {
-          RETURN_FAILURE(isolate, GetShouldThrow(isolate, should_throw),
-                         NewTypeError(MessageTemplate::kStrictCannotSetProperty,
-                                      it->GetName(), it->GetReceiver()));
-        }
-        [[fallthrough]];
-      }
+      case LookupIterator::NOT_FOUND:
       case LookupIterator::TRANSITION:
         *found = false;
         return Nothing<bool>();
@@ -2676,7 +2670,7 @@ Maybe<bool> Object::SetSuperProperty(LookupIterator* it,
         RETURN_FAILURE(it->isolate(), kThrowOnError,
                        NewTypeError(MessageTemplate::kWasmObjectsAreOpaque));
 
-      case LookupIterator::DEFERRED_MODULE_NAMESPACE:
+      case LookupIterator::MODULE_NAMESPACE:
       case LookupIterator::TRANSITION:
         UNREACHABLE();
     }
