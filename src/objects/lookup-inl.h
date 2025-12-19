@@ -286,10 +286,6 @@ DirectHandle<T> LookupIterator::GetHolder() const {
   return Cast<T>(holder_);
 }
 
-DirectHandle<JSReceiver> LookupIterator::GetCurrentHolder() const {
-  return holder_;
-}
-
 bool LookupIterator::ExtendingNonExtensible(DirectHandle<JSReceiver> receiver) {
   DCHECK(receiver.is_identical_to(GetStoreTarget<JSReceiver>()));
   DisallowGarbageCollection no_gc;

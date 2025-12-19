@@ -197,7 +197,6 @@ class V8_EXPORT_PRIVATE LookupIterator final {
   inline DirectHandle<PropertyCell> transition_cell() const;
   template <class T>
   inline DirectHandle<T> GetHolder() const;
-  inline DirectHandle<JSReceiver> GetCurrentHolder() const;
   // Returns holder object suitable for Api callbacks - in case the holder is
   // JSGlobalObject returns respective JSGlobalProxy.
   Tagged<JSObject> GetHolderForApi() const;

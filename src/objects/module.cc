@@ -453,10 +453,10 @@ Maybe<PropertyAttributes> JSModuleNamespace::GetPropertyAttributes(
     return Nothing<PropertyAttributes>();
   }
 
-  if (IsJSDeferredModuleNamespace(*object)) {
-    return Just(it->property_attributes());
-  } else {
+  if (IsJSDeferredModuleNamespace(*object)) [[unlikely]] {
     return Just(DONT_DELETE);
+  } else {
+    return Just(it->property_attributes());
   }
 }
 

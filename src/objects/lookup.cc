@@ -1327,8 +1327,8 @@ LookupIterator::State LookupIterator::LookupInSpecialHolder(
       if (IsJSProxyMap(map)) {
         if (is_element || !name_->IsAnyPrivate()) return JSPROXY;
       }
-      if (!name_->IsAnyPrivate() && IsJSModuleNamespaceMap(map)) {
-        return MODULE_NAMESPACE;
+      if (IsJSModuleNamespaceMap(map)) {
+        if (is_element || !name_->IsAnyPrivate()) return  MODULE_NAMESPACE;
       }
 #if V8_ENABLE_WEBASSEMBLY
       if (IsWasmObjectMap(map)) return WASM_OBJECT;
