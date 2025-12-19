@@ -132,8 +132,6 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
             it->GetHolder<JSDeferredModuleNamespace>();
           JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
           RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-          DirectHandle<Name> name = it->GetName();
-          return Just(holder->HasExport(it->isolate(), Cast<String>(name)));
         }
         continue;
       }
@@ -782,8 +780,6 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
           DirectHandle<JSDeferredModuleNamespace> holder =
             it->GetHolder<JSDeferredModuleNamespace>();
           JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
-          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-          return JSModuleNamespace::GetPropertyAttributes(it);
         }
         continue;
       }
@@ -1041,20 +1037,6 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
             it->GetHolder<JSDeferredModuleNamespace>();
           JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
           RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
-          DirectHandle<Name> name = it->GetName();
-          if (!holder->HasExport(it->isolate(), Cast<String>(name))) {
-            return Just(true);
-          }
-          // At this point it's a delete to an exported name and
-          // it's non-configurable.
-          // TODO(348660658): replace language mode
-          // parameter with Maybe<ShouldThrow> and use GetShouldThrow() here.
-          ShouldThrow should_throw =
-              is_sloppy(language_mode) ? kDontThrow : kThrowOnError;
-          RETURN_FAILURE(
-              isolate, should_throw,
-              NewTypeError(MessageTemplate::kStrictCannotDeleteProperty,
-                          it->GetName(), it->GetReceiver()));
         }
         continue;
       }

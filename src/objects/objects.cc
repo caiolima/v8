@@ -1334,15 +1334,9 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
       case LookupIterator::MODULE_NAMESPACE: {
         if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
           Isolate* isolate = it->isolate();
-          DirectHandle<JSDeferredModuleNamespace> holder =
-              it->GetHolder<JSDeferredModuleNamespace>();
-          DirectHandle<Name> name = it->GetName();
-          JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
+          JSDeferredModuleNamespace::EvaluateModuleSync(
+              isolate, it->GetHolder<JSDeferredModuleNamespace>());
           RETURN_EXCEPTION_IF_EXCEPTION(isolate);
-          DirectHandle<Object> result;
-          ASSIGN_RETURN_ON_EXCEPTION(
-              isolate, result, holder->GetExport(isolate, Cast<String>(name)));
-          return Handle<Object>(*result, isolate);
         }
         continue;
       }
