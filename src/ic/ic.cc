@@ -1754,12 +1754,8 @@ bool StoreIC::LookupForWrite(LookupIterator* it, DirectHandle<Object> value,
         continue;  // Continue to the prototype, if present.
       case LookupIterator::JSPROXY:
         return true;
-      case LookupIterator::MODULE_NAMESPACE: {
-        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
-          return false;
-        }
-        continue;
-      }
+      case LookupIterator::MODULE_NAMESPACE:
+        return false;
       case LookupIterator::INTERCEPTOR: {
         DirectHandle<JSObject> holder = it->GetHolder<JSObject>();
         Tagged<InterceptorInfo> info = holder->GetNamedInterceptor();
