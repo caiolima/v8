@@ -179,8 +179,15 @@ Handle<Object> JSReceiver::GetDataProperty(LookupIterator* it,
         // access to access-checked objects in that case.
         if (!it->isolate()->context().is_null() && it->HasAccess()) continue;
         [[fallthrough]];
-      case LookupIterator::MODULE_NAMESPACE:
+      case LookupIterator::MODULE_NAMESPACE: {
+        DirectHandle<JSModuleNamespace> ns = it->GetHolder<JSModuleNamespace>();
+        if (IsJSDeferredModuleNamespace(*ns) &&
+            JSDeferredModuleNamespace::TriggersEvaluation(it)) {
+          it->NotFound();
+          return it->isolate()->factory()->undefined_value();
+        }
         continue;
+      }
       case LookupIterator::JSPROXY:
         it->NotFound();
         return it->isolate()->factory()->undefined_value();
@@ -780,6 +787,7 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
           DirectHandle<JSDeferredModuleNamespace> holder =
               it->GetHolder<JSDeferredModuleNamespace>();
           JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
+          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
         }
         continue;
       }
@@ -1002,7 +1010,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
             Nothing<bool>());
         UNREACHABLE();
       case LookupIterator::INTERCEPTOR: {
-        // TODO(348660658): replace language mode
+        // TODO(https://crbug.com/348660658): replace language mode
         // parameter with Maybe<ShouldThrow> and use GetShouldThrow() here.
         ShouldThrow should_throw =
             is_sloppy(language_mode) ? kDontThrow : kThrowOnError;
@@ -1045,7 +1053,7 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
         DirectHandle<JSObject> holder = it->GetHolder<JSObject>();
         if (!it->IsConfigurable() ||
             (IsJSTypedArray(*holder) && it->IsElement(*holder))) {
-          // TODO(348660658): replace language mode
+          // TODO(https://crbug.com/348660658): replace language mode
           // parameter with Maybe<ShouldThrow> and use GetShouldThrow() here.
           ShouldThrow should_throw =
               is_sloppy(language_mode) ? kDontThrow : kThrowOnError;
