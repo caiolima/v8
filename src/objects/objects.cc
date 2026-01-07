@@ -2664,7 +2664,13 @@ Maybe<bool> Object::SetSuperProperty(LookupIterator* it,
         RETURN_FAILURE(it->isolate(), kThrowOnError,
                        NewTypeError(MessageTemplate::kWasmObjectsAreOpaque));
 
-      case LookupIterator::MODULE_NAMESPACE:
+      case LookupIterator::MODULE_NAMESPACE: {
+        Isolate* isolate = it->isolate();
+        RETURN_FAILURE(isolate, GetShouldThrow(isolate, should_throw),
+                       NewTypeError(MessageTemplate::kStrictCannotSetProperty,
+                                    it->GetName(), it->GetReceiver()));
+      }
+
       case LookupIterator::TRANSITION:
         UNREACHABLE();
     }

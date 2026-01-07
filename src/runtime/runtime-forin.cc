@@ -76,6 +76,8 @@ MaybeDirectHandle<Object> HasEnumerableProperty(
         }
       }
       case LookupIterator::MODULE_NAMESPACE:
+        DCHECK_EQ(it.GetHolder<JSModuleNamespace>()->module()->status(),
+                  Module::kEvaluated);
         continue;
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
         UNREACHABLE();

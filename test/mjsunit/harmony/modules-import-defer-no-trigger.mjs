@@ -37,6 +37,17 @@ let obj = Object.create(ns);
 assertThrows(() => obj.foo = 40, TypeError);
 assertEquals(0, globalThis.eval_list.length);
 
-
 assertThrows(() => obj.nonExistent = 41, TypeError);
 assertEquals(0, globalThis.eval_list.length);
+
+class A { constructor() { return ns; } };
+class B extends A {
+  constructor() {
+    super();
+    super.x = 14;
+  }
+};
+
+assertThrows(() => new B(), TypeError);
+assertEquals(0, globalThis.eval_list.length);
+
