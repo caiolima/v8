@@ -179,15 +179,6 @@ Handle<Object> JSReceiver::GetDataProperty(LookupIterator* it,
         // access to access-checked objects in that case.
         if (!it->isolate()->context().is_null() && it->HasAccess()) continue;
         [[fallthrough]];
-      case LookupIterator::MODULE_NAMESPACE: {
-        DirectHandle<JSModuleNamespace> ns = it->GetHolder<JSModuleNamespace>();
-        if (IsJSDeferredModuleNamespace(*ns) &&
-            JSDeferredModuleNamespace::TriggersEvaluation(it)) {
-          it->NotFound();
-          return it->isolate()->factory()->undefined_value();
-        }
-        continue;
-      }
       case LookupIterator::JSPROXY:
         it->NotFound();
         return it->isolate()->factory()->undefined_value();
@@ -220,6 +211,15 @@ Handle<Object> JSReceiver::GetDataProperty(LookupIterator* it,
         return it->GetDataValue(allocation_policy);
       case LookupIterator::NOT_FOUND:
         return it->isolate()->factory()->undefined_value();
+      case LookupIterator::MODULE_NAMESPACE: {
+        DirectHandle<JSModuleNamespace> ns = it->GetHolder<JSModuleNamespace>();
+        if (IsJSDeferredModuleNamespace(*ns) &&
+            JSDeferredModuleNamespace::TriggersEvaluation(it)) {
+          it->NotFound();
+          return it->isolate()->factory()->undefined_value();
+        }
+        continue;
+      }
     }
     UNREACHABLE();
   }
