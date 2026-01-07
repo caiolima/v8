@@ -900,7 +900,7 @@ void LoadIC::UpdateCaches(LookupIterator* lookup) {
 #ifdef DEBUG
     DirectHandle<JSModuleNamespace> ns = lookup->GetHolder<JSModuleNamespace>();
     DCHECK(IsJSDeferredModuleNamespace(*ns));
-    DCHECK_EQ(ns->module()->status(), Module::kEvaluated);
+    DCHECK_NE(ns->module()->status(), Module::kEvaluated);
 #endif
     return;
   } else {

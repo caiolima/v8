@@ -2665,7 +2665,6 @@ Maybe<bool> Object::SetSuperProperty(LookupIterator* it,
                        NewTypeError(MessageTemplate::kWasmObjectsAreOpaque));
 
       case LookupIterator::MODULE_NAMESPACE: {
-        Isolate* isolate = it->isolate();
         RETURN_FAILURE(isolate, GetShouldThrow(isolate, should_throw),
                        NewTypeError(MessageTemplate::kStrictCannotSetProperty,
                                     it->GetName(), it->GetReceiver()));
