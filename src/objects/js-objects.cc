@@ -3762,8 +3762,8 @@ Maybe<bool> JSObject::DefineOwnPropertyIgnoreAttributes(
       case LookupIterator::JSPROXY:
       case LookupIterator::TRANSITION:
       case LookupIterator::STRING_LOOKUP_START_OBJECT:
-        UNREACHABLE();
       case LookupIterator::MODULE_NAMESPACE:
+        UNREACHABLE();
       case LookupIterator::WASM_OBJECT:
         continue;  // {AddDataProperty} will throw if no other case is hit.
 
