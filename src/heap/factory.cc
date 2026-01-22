@@ -4746,7 +4746,7 @@ DirectHandle<JSFunction> Factory::CreatePromiseAllResolveElementFunction(
   DirectHandle<SharedFunctionInfo> sfi = direct_handle(
       isolate()->heap()->promise_all_resolve_element_closure_shared_fun(),
       isolate());
-  DirectHandle<i::JSFunction> function =
+  DirectHandle<JSFunction> function =
       Factory::JSFunctionBuilder{isolate(), sfi, context}.Build();
   function->set_raw_properties_or_hash(Smi::FromInt(index));
   return function;
@@ -4755,7 +4755,7 @@ DirectHandle<JSFunction> Factory::CreatePromiseAllResolveElementFunction(
 DirectHandle<PromiseCapability> Factory::CreatePromiseCapabilityObject(
     DirectHandle<JSPromise> promise, DirectHandle<JSFunction> resolve,
     DirectHandle<JSFunction> reject) {
-  Handle<PromiseCapability> capability = Cast<i::PromiseCapability>(
+  Handle<PromiseCapability> capability = Cast<PromiseCapability>(
       NewStruct(PROMISE_CAPABILITY_TYPE, AllocationType::kYoung));
   capability->set_promise(*promise);
   capability->set_resolve(*resolve);

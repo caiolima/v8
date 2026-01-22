@@ -3104,13 +3104,6 @@ void Genesis::InitializeGlobal(DirectHandle<JSGlobalObject> global_object,
         isolate_, promise_fun, "any", Builtin::kPromiseAny, 1, kAdapt);
     native_context()->set_promise_any(*promise_any);
 
-    // Internal PromiseAllFixedArray builtin for avoiding Array.prototype
-    // pollution
-    DirectHandle<JSFunction> promise_all_fixed_array = SimpleCreateFunction(
-        isolate_, factory->NewStringFromAsciiChecked("PromiseAllFixedArray"),
-        Builtin::kPromiseAllFixedArray, 1, kAdapt);
-    native_context()->set_promise_all_fixed_array(*promise_all_fixed_array);
-
     InstallFunctionWithBuiltinId(isolate_, promise_fun, "race",
                                  Builtin::kPromiseRace, 1, kAdapt);
 

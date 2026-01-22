@@ -4921,7 +4921,7 @@ Handle<Object> JSPromise::TriggerPromiseReactions(
 }
 
 MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
-    Isolate* isolate, DirectHandle<FixedArray> promises_array) {
+    Isolate* isolate, const DirectHandleVector<JSPromise>& promises) {
   Factory* factory = isolate->factory();
   Handle<JSPromise> capability_promise = factory->NewJSPromise();
   DirectHandle<Context> promise_resolving_functions_context =
@@ -4942,7 +4942,7 @@ MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
   DirectHandle<Context> resolve_element_context =
       factory->CreatePromiseAllResolveElementContext(capability);
 
-  int length = promises_array->length();
+  int length = static_cast<int>(promises.size());
   if (length == 0) {
     DirectHandle<JSArray> empty_array =
         factory->NewJSArrayWithElements(factory->empty_fixed_array());
@@ -4963,8 +4963,7 @@ MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
       *values);
 
   for (int i = 0; i < length; i++) {
-    DirectHandle<JSPromise> promise =
-        Cast<JSPromise>(direct_handle(promises_array->get(i), isolate));
+    const DirectHandle<JSPromise>& promise = promises[i];
     int remaining = Smi::ToInt(resolve_element_context->GetNoCell(
         PromiseBuiltins::PromiseAllResolveElementContextSlots::
             kPromiseAllResolveElementRemainingSlot));

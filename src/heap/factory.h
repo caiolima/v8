@@ -1116,9 +1116,9 @@ class V8_EXPORT_PRIVATE Factory : public FactoryBase<Factory> {
   DirectHandle<Context> CreatePromiseAllResolveElementContext(
       DirectHandle<PromiseCapability> capability);
   DirectHandle<Context> CreatePromiseResolvingFunctionsContext(
-      DirectHandle<JSPromise> capability);
+      DirectHandle<JSPromise> promise);
   DirectHandle<JSFunction> CreatePromiseAllResolveElementFunction(
-      DirectHandle<i::Context> context, int index);
+      DirectHandle<Context> context, int index);
   DirectHandle<PromiseCapability> CreatePromiseCapabilityObject(
       DirectHandle<JSPromise> promise, DirectHandle<JSFunction> resolve,
       DirectHandle<JSFunction> reject);

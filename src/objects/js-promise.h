@@ -6,6 +6,7 @@
 #define V8_OBJECTS_JS_PROMISE_H_
 
 #include "include/v8-promise.h"
+#include "src/handles/handles.h"
 #include "src/objects/js-objects.h"
 #include "src/objects/promise.h"
 #include "torque-generated/bit-fields.h"
@@ -69,7 +70,7 @@ class JSPromise
       DirectHandle<JSPromise> promise, DirectHandle<Object> resolution);
 
   static MaybeHandle<JSPromise> PerformPromiseAll(
-      Isolate* isolate, DirectHandle<FixedArray> promises_array);
+      Isolate* isolate, const DirectHandleVector<JSPromise>& promises);
 
   // Dispatched behavior.
   DECL_PRINTER(JSPromise)

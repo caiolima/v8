@@ -2445,9 +2445,7 @@ MaybeLocal<Value> Module::DeferredEvaluate(Local<Context> context) {
     return api_scope.Escape(module_resolver->GetPromise());
   }
 
-  i::Handle<i::FixedArray> promises_fixed_array =
-      i_isolate->factory()->NewFixedArray(
-          static_cast<int>(evaluation_list.size()));
+  i::DirectHandleVector<i::JSPromise> promises(i_isolate);
   bool has_error = false;
   for (size_t i = 0; i < evaluation_list.size(); i++) {
     i::Handle<i::Module> dep_module = evaluation_list[i];
@@ -2459,26 +2457,17 @@ MaybeLocal<Value> Module::DeferredEvaluate(Local<Context> context) {
     }
     Local<Value> eval_result = maybe_eval_result.ToLocalChecked();
     CHECK(eval_result->IsPromise());
-    i::Handle<i::JSPromise> promise_handle =
-        Utils::OpenHandle(*eval_result.As<Promise>());
-    promises_fixed_array->set(static_cast<int>(i), *promise_handle);
+    i::DirectHandle<i::JSPromise> promise_handle =
+        Utils::OpenDirectHandle(*eval_result.As<Promise>());
+    promises.push_back(promise_handle);
   }
 
   if (has_error) {
     return api_scope.EscapeMaybe(MaybeLocal<Value>());
   }
 
-  // FIXME(caiolima): this is the alternative version that calls the builtin
-  // i::DirectHandle<i::Object> argv[] = {promises_fixed_array};
-  // i::DirectHandle<i::JSFunction> promise_all_function =
-  //     i::direct_handle(native_context->promise_all_fixed_array(), i_isolate);
-  // i::MaybeHandle<i::Object> maybe_promise_all_result =
-  // i::Execution::CallBuiltin(
-  //     i_isolate, promise_all_function,
-  //     i_isolate->factory()->undefined_value(), base::VectorOf(argv));
-
   i::MaybeHandle<i::JSPromise> maybe_promise_all_result =
-      i::JSPromise::PerformPromiseAll(i_isolate, promises_fixed_array);
+      i::JSPromise::PerformPromiseAll(i_isolate, promises);
   if (maybe_promise_all_result.is_null()) {
     return api_scope.EscapeMaybe(MaybeLocal<Value>());
   }
