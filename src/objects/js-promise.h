@@ -68,6 +68,9 @@ class JSPromise
   V8_WARN_UNUSED_RESULT static MaybeHandle<Object> Resolve(
       DirectHandle<JSPromise> promise, DirectHandle<Object> resolution);
 
+  static MaybeHandle<JSPromise> PerformPromiseAll(
+      Isolate* isolate, DirectHandle<FixedArray> promises_array);
+
   // Dispatched behavior.
   DECL_PRINTER(JSPromise)
   DECL_VERIFIER(JSPromise)

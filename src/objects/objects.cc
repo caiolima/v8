@@ -17,6 +17,7 @@
 #include "src/base/logging.h"
 #include "src/base/overflowing-math.h"
 #include "src/builtins/accessors.h"
+#include "src/builtins/builtins-promise.h"
 #include "src/builtins/builtins.h"
 #include "src/codegen/source-position-table.h"
 #include "src/common/globals.h"
@@ -4917,6 +4918,106 @@ Handle<Object> JSPromise::TriggerPromiseReactions(
   }
 
   return isolate->factory()->undefined_value();
+}
+
+MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
+    Isolate* isolate, DirectHandle<FixedArray> promises_array) {
+  Factory* factory = isolate->factory();
+  Handle<JSPromise> capability_promise = factory->NewJSPromise();
+  DirectHandle<Context> promise_resolving_functions_context =
+      factory->CreatePromiseResolvingFunctionsContext(capability_promise);
+  DirectHandle<JSFunction> capability_resolve =
+      Factory::JSFunctionBuilder{
+          isolate, factory->promise_capability_default_resolve_shared_fun(),
+          promise_resolving_functions_context}
+          .Build();
+  DirectHandle<JSFunction> capability_reject =
+      Factory::JSFunctionBuilder{
+          isolate, factory->promise_capability_default_reject_shared_fun(),
+          promise_resolving_functions_context}
+          .Build();
+  DirectHandle<PromiseCapability> capability =
+      factory->CreatePromiseCapabilityObject(
+          capability_promise, capability_resolve, capability_reject);
+  DirectHandle<Context> resolve_element_context =
+      factory->CreatePromiseAllResolveElementContext(capability);
+
+  int length = promises_array->length();
+  if (length == 0) {
+    DirectHandle<JSArray> empty_array =
+        factory->NewJSArrayWithElements(factory->empty_fixed_array());
+    DirectHandle<Object> resolve_args[] = {empty_array};
+    Execution::Call(isolate, capability_resolve, factory->undefined_value(),
+                    base::VectorOf(resolve_args))
+        .ToHandleChecked();
+    return capability_promise;
+  }
+
+  DirectHandle<FixedArray> values = factory->NewFixedArray(length);
+  for (int i = 0; i < length; i++) {
+    values->set(i, *factory->promise_hole_value());
+  }
+  resolve_element_context->SetNoCell(
+      PromiseBuiltins::PromiseAllResolveElementContextSlots::
+          kPromiseAllResolveElementValuesSlot,
+      *values);
+
+  for (int i = 0; i < length; i++) {
+    DirectHandle<JSPromise> promise =
+        Cast<JSPromise>(direct_handle(promises_array->get(i), isolate));
+    int remaining = Smi::ToInt(resolve_element_context->GetNoCell(
+        PromiseBuiltins::PromiseAllResolveElementContextSlots::
+            kPromiseAllResolveElementRemainingSlot));
+    resolve_element_context->SetNoCell(
+        PromiseBuiltins::PromiseAllResolveElementContextSlots::
+            kPromiseAllResolveElementRemainingSlot,
+        Smi::FromInt(remaining + 1));
+    DirectHandle<JSFunction> resolve_element =
+        factory->CreatePromiseAllResolveElementFunction(resolve_element_context,
+                                                        i + 1);
+    DirectHandle<Object> args[] = {resolve_element, capability_reject,
+                                   factory->undefined_value()};
+    if (V8_UNLIKELY(Execution::CallBuiltin(isolate,
+                                           isolate->perform_promise_then(),
+                                           promise, base::VectorOf(args))
+                        .is_null())) {
+      CHECK(isolate->has_exception());
+      DirectHandle<Object> reject_args[] = {
+          direct_handle(isolate->exception(), isolate)};
+      isolate->clear_exception();
+      Execution::Call(isolate, capability_reject, factory->undefined_value(),
+                      base::VectorOf(reject_args))
+          .ToHandleChecked();
+      return capability_promise;
+    }
+  }
+  int final_remaining =
+      Smi::ToInt(resolve_element_context->GetNoCell(
+          PromiseBuiltins::PromiseAllResolveElementContextSlots::
+              kPromiseAllResolveElementRemainingSlot)) -
+      1;
+  resolve_element_context->SetNoCell(
+      PromiseBuiltins::PromiseAllResolveElementContextSlots::
+          kPromiseAllResolveElementRemainingSlot,
+      Smi::FromInt(final_remaining));
+  if (final_remaining == 0) {
+    DirectHandle<FixedArray> final_values = Cast<FixedArray>(direct_handle(
+        resolve_element_context->GetNoCell(
+            PromiseBuiltins::PromiseAllResolveElementContextSlots::
+                kPromiseAllResolveElementValuesSlot),
+        isolate));
+    DirectHandle<JSArray> values_array =
+        factory->NewJSArrayWithElements(final_values);
+    resolve_element_context->SetNoCell(
+        PromiseBuiltins::PromiseAllResolveElementContextSlots::
+            kPromiseAllResolveElementValuesSlot,
+        *factory->empty_fixed_array());
+    DirectHandle<Object> resolve_args[] = {values_array};
+    Execution::Call(isolate, capability_resolve, factory->undefined_value(),
+                    base::VectorOf(resolve_args))
+        .ToHandleChecked();
+  }
+  return capability_promise;
 }
 
 #ifdef V8_LOWER_LIMITS_MODE
