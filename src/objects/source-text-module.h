@@ -93,7 +93,8 @@ class SourceTextModule
   static void GatherAsynchronousTransitiveDependencies(
       Isolate* isolate, Handle<Module> module,
       UnorderedModuleSet* evaluation_set,
-      ZoneVector<Handle<Module>>* evaluation_list, UnorderedModuleSet* seen);
+      ZoneVector<Handle<SourceTextModule>>* evaluation_list,
+      UnorderedModuleSet* seen);
 
   static bool ReadyForSyncExecution(Isolate* isolate, Handle<Module> module,
                                     UnorderedModuleSet* seen);

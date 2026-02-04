@@ -69,6 +69,9 @@ class JSPromise
   V8_WARN_UNUSED_RESULT static MaybeHandle<Object> Resolve(
       DirectHandle<JSPromise> promise, DirectHandle<Object> resolution);
 
+  // This is intened to be used when we have an array of native promises, so the
+  // expectation is a call like PerformPromiseAll([native-promise, ...],
+  // %Promise%, NewPromiseCapability(%Promise%), %Promise.resolve%)
   static MaybeHandle<JSPromise> PerformPromiseAll(
       Isolate* isolate, const DirectHandleVector<JSPromise>& promises);
 

@@ -2421,14 +2421,14 @@ MaybeLocal<Value> Module::Evaluate(Local<Context> context) {
   return api_scope.EscapeMaybe(i::Module::Evaluate(i_isolate, self));
 }
 
-MaybeLocal<Value> Module::DeferredEvaluate(Local<Context> context) {
+MaybeLocal<Value> Module::EvaluateForImportDefer(Local<Context> context) {
   auto i_isolate = i::Isolate::Current();
   TRACE_EVENT_CALL_STATS_SCOPED(i_isolate, "v8", "V8.Execute");
   EnterV8Scope<InternalEscapableScope> api_scope{i_isolate, context,
                                                  RCCId::kAPI_Module_Evaluate};
   auto self = Utils::OpenHandle(this);
   i::Zone zone(i_isolate->allocator(), ZONE_NAME);
-  i::ZoneVector<i::Handle<i::Module>> evaluation_list(&zone);
+  i::ZoneVector<i::Handle<i::SourceTextModule>> evaluation_list(&zone);
   i::UnorderedModuleSet seen_modules(&zone);
   i::UnorderedModuleSet evaluation_set(&zone);
   if (i::IsSourceTextModule(*self)) {
@@ -2446,24 +2446,18 @@ MaybeLocal<Value> Module::DeferredEvaluate(Local<Context> context) {
   }
 
   i::DirectHandleVector<i::JSPromise> promises(i_isolate);
-  bool has_error = false;
   for (size_t i = 0; i < evaluation_list.size(); i++) {
     i::Handle<i::Module> dep_module = evaluation_list[i];
     Local<Module> v8_dep_module = Utils::ToLocal(dep_module);
     MaybeLocal<Value> maybe_eval_result = v8_dep_module->Evaluate(context);
     if (maybe_eval_result.IsEmpty()) {
-      has_error = true;
-      break;
+      return api_scope.EscapeMaybe(MaybeLocal<Value>());
     }
     Local<Value> eval_result = maybe_eval_result.ToLocalChecked();
     CHECK(eval_result->IsPromise());
     i::DirectHandle<i::JSPromise> promise_handle =
         Utils::OpenDirectHandle(*eval_result.As<Promise>());
     promises.push_back(promise_handle);
-  }
-
-  if (has_error) {
-    return api_scope.EscapeMaybe(MaybeLocal<Value>());
   }
 
   i::MaybeHandle<i::JSPromise> maybe_promise_all_result =

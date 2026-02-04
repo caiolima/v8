@@ -1281,7 +1281,7 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
   // in eveluation_list. It's encessary to keep evaluation order as it's seen to
   // be spec compliant.
   UnorderedModuleSet evaluation_set(&zone);
-  ZoneVector<Handle<Module>> eveluation_list(&zone);
+  ZoneVector<Handle<Module>> evaluation_list(&zone);
   UnorderedModuleSet seen_modules(&zone);
   const uint32_t requested_modules_len = requested_modules->ulength().value();
   for (uint32_t i = 0; i < requested_modules_len; ++i) {
@@ -1292,21 +1292,25 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
       continue;
     }
 
-    Handle<Module> requested_module(Cast<Module>(requested_modules->get(i)),
-                                    isolate);
+    Handle<SourceTextModule> requested_module(
+        Cast<SourceTextModule>(requested_modules->get(i)), isolate);
     if (module_request->phase() == ModuleImportPhase::kDefer) {
-      GatherAsynchronousTransitiveDependencies(isolate, requested_module,
-                                               &evaluation_set,
-                                               &eveluation_list, &seen_modules);
+      ZoneVector<Handle<SourceTextModule>> async_eveluation_list(&zone);
+      GatherAsynchronousTransitiveDependencies(
+          isolate, requested_module, &evaluation_set, &async_eveluation_list,
+          &seen_modules);
+      for (auto module : async_eveluation_list) {
+        evaluation_list.push_back(module);
+      }
     } else if (evaluation_set.insert(requested_module).second) {
-      eveluation_list.push_back(requested_module);
+      evaluation_list.push_back(requested_module);
     }
   }
 
   // 11. For each ModuleRequest Record required of module.[[RequestedModules]],
-  for (size_t i = 0, length = eveluation_list.size(); i < length; ++i) {
+  for (size_t i = 0, length = evaluation_list.size(); i < length; ++i) {
     // b. If requiredModule.[[Phase]] is evaluation, then
-    Handle<Module> requested_module = eveluation_list[i];
+    Handle<Module> requested_module = evaluation_list[i];
     // c. If requiredModule is a Cyclic Module Record, then
     if (IsSourceTextModule(*requested_module)) {
       // b. Set index to ? InnerModuleEvaluation(requiredModule, stack, index).
@@ -1426,7 +1430,8 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
 // https://tc39.es/proposal-defer-import-eval/#sec-GatherAsynchronousTransitiveDependencies
 void SourceTextModule::GatherAsynchronousTransitiveDependencies(
     Isolate* isolate, Handle<Module> module, UnorderedModuleSet* evaluation_set,
-    ZoneVector<Handle<Module>>* evaluation_list, UnorderedModuleSet* seen_set) {
+    ZoneVector<Handle<SourceTextModule>>* evaluation_list,
+    UnorderedModuleSet* seen_set) {
   if (!seen_set->insert(module).second) {
     return;
   }

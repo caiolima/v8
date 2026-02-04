@@ -4942,6 +4942,16 @@ MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
   DirectHandle<Context> resolve_element_context =
       factory->CreatePromiseAllResolveElementContext(capability);
 
+  // For catch prediction, don't treat the .then calls as handling it;
+  // instead, recurse outwards.
+  if (isolate->debug()->is_active()) {
+    Object::SetProperty(isolate, capability_reject,
+                        factory->promise_forwarding_handler_symbol(),
+                        factory->true_value(), StoreOrigin::kMaybeKeyed,
+                        Just(ShouldThrow::kThrowOnError))
+        .Check();
+  }
+
   int length = static_cast<int>(promises.size());
   if (length == 0) {
     DirectHandle<JSArray> empty_array =
@@ -4962,6 +4972,13 @@ MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
           kPromiseAllResolveElementValuesSlot,
       *values);
 
+  bool use_slow_path =
+      v8_flags.force_slow_path || !Protectors::IsPromiseHookIntact(isolate) ||
+      !Protectors::IsPromiseSpeciesLookupChainIntact(isolate) ||
+      !Protectors::IsPromiseThenLookupChainIntact(isolate);
+
+  DirectHandle<JSObject> native_promise_prototype(
+      isolate->native_context()->promise_prototype(), isolate);
   for (int i = 0; i < length; i++) {
     const DirectHandle<JSPromise>& promise = promises[i];
     int remaining = Smi::ToInt(resolve_element_context->GetNoCell(
@@ -4974,20 +4991,64 @@ MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
     DirectHandle<JSFunction> resolve_element =
         factory->CreatePromiseAllResolveElementFunction(resolve_element_context,
                                                         i + 1);
-    DirectHandle<Object> args[] = {resolve_element, capability_reject,
-                                   factory->undefined_value()};
-    if (V8_UNLIKELY(Execution::CallBuiltin(isolate,
-                                           isolate->perform_promise_then(),
-                                           promise, base::VectorOf(args))
-                        .is_null())) {
-      CHECK(isolate->has_exception());
-      DirectHandle<Object> reject_args[] = {
-          direct_handle(isolate->exception(), isolate)};
-      isolate->clear_exception();
-      Execution::Call(isolate, capability_reject, factory->undefined_value(),
-                      base::VectorOf(reject_args))
-          .ToHandleChecked();
-      return capability_promise;
+    bool slow_path_for_promise =
+        use_slow_path ||
+        (promise->map()->prototype() != *native_promise_prototype);
+    if (slow_path_for_promise) {
+      // Slow path: lookup and call "then" explicitly so DevTools can properly
+      // track promise chains for catch prediction.
+      // Perform ? Invoke(promise, "then", « resolveElement,
+      //                  resultCapability.[[Reject]] »).
+      Handle<Object> then_fn;
+      if (!Object::GetProperty(isolate, promise, factory->then_string())
+               .ToHandle(&then_fn)) {
+        CHECK(isolate->has_exception());
+        DirectHandle<Object> reject_args[] = {
+            direct_handle(isolate->exception(), isolate)};
+        isolate->clear_exception();
+        Execution::Call(isolate, capability_reject, factory->undefined_value(),
+                        base::VectorOf(reject_args))
+            .ToHandleChecked();
+        return capability_promise;
+      }
+      Handle<Object> then_result;
+      DirectHandle<Object> then_args[] = {resolve_element, capability_reject};
+      if (!Execution::Call(isolate, then_fn, promise, base::VectorOf(then_args))
+               .ToHandle(&then_result)) {
+        CHECK(isolate->has_exception());
+        DirectHandle<Object> reject_args[] = {
+            direct_handle(isolate->exception(), isolate)};
+        isolate->clear_exception();
+        Execution::Call(isolate, capability_reject, factory->undefined_value(),
+                        base::VectorOf(reject_args))
+            .ToHandleChecked();
+        return capability_promise;
+      }
+      // For catch prediction, mark that rejections here are
+      // semantically handled by the combined Promise.
+      if (isolate->debug()->is_active() && IsJSPromise(*then_result)) {
+        Object::SetProperty(isolate, Cast<JSAny>(then_result),
+                            factory->promise_handled_by_symbol(),
+                            capability_promise)
+            .Check();
+      }
+    } else {
+      // Fast path: use PerformPromiseThen directly.
+      DirectHandle<Object> args[] = {resolve_element, capability_reject,
+                                     factory->undefined_value()};
+      if (V8_UNLIKELY(Execution::CallBuiltin(isolate,
+                                             isolate->perform_promise_then(),
+                                             promise, base::VectorOf(args))
+                          .is_null())) {
+        CHECK(isolate->has_exception());
+        DirectHandle<Object> reject_args[] = {
+            direct_handle(isolate->exception(), isolate)};
+        isolate->clear_exception();
+        Execution::Call(isolate, capability_reject, factory->undefined_value(),
+                        base::VectorOf(reject_args))
+            .ToHandleChecked();
+        return capability_promise;
+      }
     }
   }
   int final_remaining =
@@ -4999,6 +5060,8 @@ MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
       PromiseBuiltins::PromiseAllResolveElementContextSlots::
           kPromiseAllResolveElementRemainingSlot,
       Smi::FromInt(final_remaining));
+  // This condition can happen in cases where the Thenable calls the resolve
+  // callback immediately.
   if (final_remaining == 0) {
     DirectHandle<FixedArray> final_values = Cast<FixedArray>(direct_handle(
         resolve_element_context->GetNoCell(

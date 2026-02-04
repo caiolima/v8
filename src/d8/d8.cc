@@ -1772,12 +1772,10 @@ void Shell::DoHostImportModuleDynamically(void* data) {
           } else {
             DCHECK_EQ(phase, ModuleImportPhase::kDefer);
             MaybeLocal<Value> maybe_result =
-                root_module->DeferredEvaluate(realm);
+                root_module->EvaluateForImportDefer(realm);
             if (maybe_result.IsEmpty()) break;
             global_result_promise.Reset(
                 isolate, maybe_result.ToLocalChecked().As<Promise>());
-            // Note: DeferredEvaluate already calls GetModuleNamespace, so this
-            // will return the object that was created there.
             global_namespace_or_source.Reset(
                 isolate, root_module->GetModuleNamespace(phase));
           }

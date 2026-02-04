@@ -285,12 +285,14 @@ class V8_EXPORT Module : public Data {
   /**
    * Evaluates async dependencies of a module and defer its evaluation
    *
+   * It implements 13.3.10.4.1 ContinueDynamicImport, Step 6.e.
+   * (https://tc39.es/proposal-defer-import-eval/#sec-ContinueDynamicImport).
    * This will gather all async dependencies of this module and trigger their
    * evaluation. It returns a Promise that is similar to a Promise.all for all
    * modules that are going to be evaluated. This module and its sync
    * dependencies are not going to be evaluated.
    */
-  V8_WARN_UNUSED_RESULT MaybeLocal<Value> DeferredEvaluate(
+  V8_WARN_UNUSED_RESULT MaybeLocal<Value> EvaluateForImportDefer(
       Local<Context> context);
 
   /**
