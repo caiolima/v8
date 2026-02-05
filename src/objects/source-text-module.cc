@@ -1299,8 +1299,8 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
       GatherAsynchronousTransitiveDependencies(
           isolate, requested_module, &evaluation_set, &async_eveluation_list,
           &seen_modules);
-      for (auto module : async_eveluation_list) {
-        evaluation_list.push_back(module);
+      for (auto async_module : async_eveluation_list) {
+        evaluation_list.push_back(async_module);
       }
     } else if (evaluation_set.insert(requested_module).second) {
       evaluation_list.push_back(requested_module);
