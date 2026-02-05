@@ -1292,8 +1292,8 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
       continue;
     }
 
-    Handle<SourceTextModule> requested_module(
-        Cast<SourceTextModule>(requested_modules->get(i)), isolate);
+    Handle<Module> requested_module(Cast<Module>(requested_modules->get(i)),
+                                    isolate);
     if (module_request->phase() == ModuleImportPhase::kDefer) {
       ZoneVector<Handle<SourceTextModule>> async_eveluation_list(&zone);
       GatherAsynchronousTransitiveDependencies(
