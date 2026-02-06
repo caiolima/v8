@@ -23424,36 +23424,6 @@ TEST(PromiseCatchCallsBuiltin) {
                   .FromJust());
 }
 
-TEST(PerformPromiseAllCallsBuiltin) {
-  LocalContext context;
-  v8::Isolate* isolate = context.isolate();
-  i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate);
-  v8::HandleScope scope(isolate);
-  Local<Object> global = context->Global();
-  CompileRun(
-      "var thenCalled = false;\n"
-      "var originalThen = Promise.prototype.then;\n"
-      "Promise.prototype.then = function(onFulfill, onReject) {\n"
-      "  thenCalled = true;\n"
-      "  return originalThen.call(this, onFulfill, onReject);\n"
-      "};\n");
-  v8::Local<v8::Promise::Resolver> resolver =
-      v8::Promise::Resolver::New(context.local()).ToLocalChecked();
-  resolver->Resolve(context.local(), v8::Integer::New(isolate, 42)).FromJust();
-  v8::Local<v8::Promise> promise = resolver->GetPromise();
-  i::DirectHandle<i::JSPromise> i_promise =
-      v8::Utils::OpenDirectHandle(*promise);
-  i::DirectHandleVector<i::JSPromise> promises(i_isolate);
-  promises.push_back(i_promise);
-  i::Handle<i::JSPromise> aggregate =
-      i::JSPromise::PerformPromiseAll(i_isolate, promises).ToHandleChecked();
-  USE(aggregate);
-  isolate->PerformMicrotaskCheckpoint();
-  CHECK(global->Get(context.local(), v8_str("thenCalled"))
-            .ToLocalChecked()
-            ->BooleanValue(isolate));
-}
-
 TEST(PromiseStateAndValue) {
   LocalContext context;
   v8::Isolate* isolate = context.isolate();
