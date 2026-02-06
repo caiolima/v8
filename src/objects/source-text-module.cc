@@ -1295,11 +1295,11 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
     Handle<Module> requested_module(Cast<Module>(requested_modules->get(i)),
                                     isolate);
     if (module_request->phase() == ModuleImportPhase::kDefer) {
-      ZoneVector<Handle<SourceTextModule>> async_eveluation_list(&zone);
+      ZoneVector<Handle<SourceTextModule>> async_evaluation_list(&zone);
       GatherAsynchronousTransitiveDependencies(
-          isolate, requested_module, &evaluation_set, &async_eveluation_list,
+          isolate, requested_module, &evaluation_set, &async_evaluation_list,
           &seen_modules);
-      for (auto async_module : async_eveluation_list) {
+      for (auto async_module : async_evaluation_list) {
         evaluation_list.push_back(async_module);
       }
     } else if (evaluation_set.insert(requested_module).second) {
