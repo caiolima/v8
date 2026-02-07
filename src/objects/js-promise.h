@@ -73,7 +73,7 @@ class JSPromise
   // expectation is a call like PerformPromiseAll([native-promise, ...],
   // %Promise%, NewPromiseCapability(%Promise%), %Promise.resolve%), and not
   // consider any monkey-patch of Promise.prototype.
-  static MaybeHandle<JSPromise> PerformPromiseAll(
+  V8_EXPORT_PRIVATE static MaybeHandle<JSPromise> PerformPromiseAll(
       Isolate* isolate, const DirectHandleVector<JSPromise>& promises);
 
   // Dispatched behavior.
