@@ -4963,6 +4963,16 @@ MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
     return capability_promise;
   }
 
+  if (length >= static_cast<int>(PropertyArray::HashField::kMax)) {
+    DirectHandle<Object> error = factory->NewRangeError(
+        MessageTemplate::kTooManyElementsInPromiseCombinator,
+        factory->NewStringFromAsciiChecked("all"));
+    Execution::Call(isolate, capability_reject, factory->undefined_value(),
+                    base::VectorOf(&error, 1))
+        .ToHandleChecked();
+    return capability_promise;
+  }
+
   DirectHandle<FixedArray> values = factory->NewFixedArray(length);
   for (int i = 0; i < length; i++) {
     values->set(i, *factory->promise_hole_value());

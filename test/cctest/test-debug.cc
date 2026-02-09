@@ -7032,7 +7032,6 @@ class PromiseAllExceptionDelegate : public v8::debug::DebugDelegate {
     exception_count++;
     if (is_uncaught) uncaught_count++;
     v8::Isolate* isolate = CcTest::isolate();
-    last_exception.Reset(isolate, exception);
     last_promise.Reset(isolate, promise);
     if (!exception.IsEmpty() && exception->IsObject()) {
       v8::Local<v8::Object> exc_obj = exception.As<v8::Object>();
@@ -7050,7 +7049,6 @@ class PromiseAllExceptionDelegate : public v8::debug::DebugDelegate {
 
   int exception_count = 0;
   int uncaught_count = 0;
-  v8::Global<v8::Value> last_exception;
   v8::Global<v8::Value> last_promise;
   std::string last_exception_message;
 };
