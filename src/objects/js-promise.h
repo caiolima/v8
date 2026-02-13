@@ -74,7 +74,8 @@ class JSPromise
   // %Promise%, NewPromiseCapability(%Promise%), %Promise.resolve%), following
   // the expectation of native promise adoption.
   // If https://github.com/tc39/proposal-defer-import-eval/pull/77/ lands, this
-  // function will be the implementation of #sec-safe-perform-promise-all.
+  // function will be the implementation of #sec-safe-perform-promise-all
+  // TODO(caiolima): update this comment after PR decision.
   V8_EXPORT_PRIVATE static MaybeHandle<JSPromise> PerformPromiseAll(
       Isolate* isolate, const DirectHandleVector<JSPromise>& promises);
 

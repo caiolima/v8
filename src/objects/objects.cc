@@ -4993,9 +4993,6 @@ MaybeHandle<JSPromise> JSPromise::PerformPromiseAll(
                                                         i + 1);
     DirectHandle<Object> args[] = {resolve_element, capability_reject,
                                    factory->undefined_value()};
-    // TODO(caiolima): The call to native Promise "then" is yet to be approved
-    // on https://github.com/tc39/proposal-defer-import-eval/pull/77. Revisit it
-    // after a decision is made.
     if (V8_UNLIKELY(Execution::CallBuiltin(isolate,
                                            isolate->perform_promise_then(),
                                            promise, base::VectorOf(args))
