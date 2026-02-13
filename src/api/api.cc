@@ -2460,6 +2460,9 @@ MaybeLocal<Value> Module::EvaluateForImportDefer(Local<Context> context) {
     promises.push_back(promise_handle);
   }
 
+  // TODO(caiolima): The call to native Promise "then" is yet to be approved
+  // on https://github.com/tc39/proposal-defer-import-eval/pull/77. Revisit it
+  // after a decision is made.
   i::MaybeHandle<i::JSPromise> maybe_promise_all_result =
       i::JSPromise::PerformPromiseAll(i_isolate, promises);
   if (maybe_promise_all_result.is_null()) {
