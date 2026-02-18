@@ -1768,7 +1768,6 @@ void Shell::DoHostImportModuleDynamically(void* data) {
                 isolate, maybe_result.ToLocalChecked().As<Promise>());
             global_namespace_or_source.Reset(
                 isolate, root_module->GetModuleNamespace(phase));
-
           } else {
             DCHECK_EQ(phase, ModuleImportPhase::kDefer);
             MaybeLocal<Value> maybe_result =
