@@ -1196,15 +1196,8 @@ bool Shell::ExecuteSource(Isolate* isolate, const Source& source,
     out_result->Reset(isolate, result);
   }
 
-  // It's possible that a FinalizationRegistry cleanup task threw an error or
-  // a termination was requested by a dynamic dependency.
-  if (try_catch.HasCaught()) {
-    if (try_catch.HasTerminated()) {
-      return true;
-    }
-    return false;
-  }
-  return true;
+  // It's possible that a FinalizationRegistry cleanup task threw an error.
+  return !try_catch.HasCaught();
 }
 
 namespace {
