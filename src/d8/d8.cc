@@ -1196,8 +1196,15 @@ bool Shell::ExecuteSource(Isolate* isolate, const Source& source,
     out_result->Reset(isolate, result);
   }
 
-  // It's possible that a FinalizationRegistry cleanup task threw an error.
-  return !try_catch.HasCaught();
+  // It's possible that a FinalizationRegistry cleanup task threw an error or
+  // a termination was requested by a dynamic dependency.
+  if (try_catch.HasCaught()) {
+    if (try_catch.HasTerminated()) {
+      return true;
+    }
+    return false;
+  }
+  return true;
 }
 
 namespace {
@@ -1870,6 +1877,10 @@ void RejectPromiseIfExecutionIsNotTerminating(Isolate* isolate,
   CHECK(try_catch.HasCaught());
   if (isolate->IsExecutionTerminating()) {
     Shell::ReportException(isolate, try_catch);
+    // Re-request terminate execution as it's been cleared, so
+    // Shell::FinishExecuting doesn't waste time draining all enqueued tasks
+    // and microtasks.
+    isolate->TerminateExecution();
   } else {
     resolver->Reject(realm, try_catch.Exception()).ToChecked();
   }
