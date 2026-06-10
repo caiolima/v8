@@ -908,7 +908,7 @@ MaybeDirectHandle<Object> SourceTextModule::Evaluate(
   // entry point; otherwise Module::Evaluate would have returned its
   // already-rejected top-level capability.
   CHECK_IMPLIES(module->status() == kErrored,
-                !IsJSPromise(module->top_level_capability()));
+                IsUndefined(module->top_level_capability()));
 
   // 5. Let stack be a new empty List.
   Zone zone(isolate->allocator(), ZONE_NAME);
