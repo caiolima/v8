@@ -1,0 +1,8 @@
+// Copyright 2026 the V8 project authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// The heavy module's only use site is behind a flag the benchmark never
+// passes as true, so an eager import pays for evaluation it never needs.
+import * as ns from "./heavy-loop.js";
+export function maybeUse(flag){ return flag ? ns.sentinel : -1; }
