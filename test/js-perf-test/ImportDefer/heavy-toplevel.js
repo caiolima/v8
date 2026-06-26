@@ -11,6 +11,10 @@
 // eagerly, even when deferred) but never executes it. `import defer` skips
 // evaluation only, so for this module deferral saves almost nothing -- the
 // cost is in compilation, which is NOT deferred today.
+
+// globalThis.__sideEffect counts if a given module was evaluated and it is
+// used by the harness to validate if a given module evaluation was deferred or
+// not.
 globalThis.__sideEffect = (globalThis.__sideEffect | 0) + 1;
 
 let sink = 0;
