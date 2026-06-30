@@ -884,6 +884,10 @@ bool SourceTextModule::MaybeHandleEvaluationException(
       // iii. Set m.[[EvaluationError]] to result.
       descendant->RecordError(isolate, exception);
     }
+
+    if (IsTheHole(this->exception())) {
+      RecordError(isolate, exception);
+    }
     return true;
   }
   // If the exception was a termination exception, rejecting the promise
