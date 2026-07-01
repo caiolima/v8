@@ -18,7 +18,7 @@ function recurse() {
   // the deferred namespace via Object.defineProperty (same path as the original
   // testcase: DefineOwnProperty -> GetOwnPropertyDescriptor ->
   // GetPropertyAttributes -> EvaluateModuleSync).
-  recurse();
+  try { recurse(); } catch(e) { };
   Object.defineProperty(ns, 'x', { value: 1 });
 }
 
