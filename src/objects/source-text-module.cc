@@ -1442,6 +1442,17 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
   return result;
 }
 
+bool SourceTextModule::IsModuleSCCEvaluated(Handle<SourceTextModule> module) {
+  if (!IsTheHole(module->cycle_root())) {
+    Tagged<SourceTextModule> cycle_root =
+        Cast<SourceTextModule>(module->cycle_root());
+    return cycle_root->status() == Module::kEvaluated ||
+           cycle_root->status() == Module::kErrored;
+  }
+  return module->status() == Module::kEvaluated ||
+         module->status() == Module::kErrored;
+}
+
 // https://tc39.es/proposal-defer-import-eval/#sec-GatherAsynchronousTransitiveDependencies
 void SourceTextModule::GatherAsynchronousTransitiveDependencies(
     Isolate* isolate, Handle<Module> module, UnorderedModuleSet* evaluation_set,
@@ -1457,7 +1468,7 @@ void SourceTextModule::GatherAsynchronousTransitiveDependencies(
 
   Handle<SourceTextModule> source_text_module = Cast<SourceTextModule>(module);
   if (source_text_module->status() == kEvaluating ||
-      module->status() == kEvaluatingAsync || module->status() == kEvaluated) {
+      IsModuleSCCEvaluated(source_text_module)) {
     return;
   }
 
@@ -1503,7 +1514,7 @@ bool SourceTextModule::ReadyForSyncExecution(Isolate* isolate,
   }
 
   Handle<SourceTextModule> source_text_module = Cast<SourceTextModule>(module);
-  if (source_text_module->status() == kEvaluated) {
+  if (IsModuleSCCEvaluated(source_text_module)) {
     return true;
   }
 

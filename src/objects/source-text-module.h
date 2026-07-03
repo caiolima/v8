@@ -83,6 +83,8 @@ V8_OBJECT class SourceTextModule : public Module {
             DirectHandleVector<JSMessageObject>>
   GetStalledTopLevelAwaitMessages(Isolate* isolate);
 
+  static bool IsModuleSCCEvaluated(Handle<SourceTextModule> module);
+
   static void GatherAsynchronousTransitiveDependencies(
       Isolate* isolate, Handle<Module> module,
       UnorderedModuleSet* evaluation_set,
