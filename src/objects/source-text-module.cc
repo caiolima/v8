@@ -1443,6 +1443,15 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
 }
 
 bool SourceTextModule::IsModuleSCCEvaluated(Handle<SourceTextModule> module) {
+  // It's necessary to check if [[CycleRoot]] is not empty here because:
+  //   1. A module starts with its [[CycleRoot]] as `TheHole` and it's set
+  //   once the cycle is detected, or when the module finishes its evaluation
+  //   without errors.
+  //   2. GatherAsynchronousTransitiveDependencies can be called with a module
+  //   where it's `[[CycleRoot]]` is not set yet, and since it depends on
+  //   `IsModuleSCCEvaluated`, we need such guard. A later call from
+  //   `ReadyForSyncExecution` for the same module will have its `[[CycleRoot]]`
+  //   set, unless its evaluation errored.
   if (!IsTheHole(module->cycle_root())) {
     Tagged<SourceTextModule> cycle_root =
         Cast<SourceTextModule>(module->cycle_root());
