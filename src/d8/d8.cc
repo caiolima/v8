@@ -2072,10 +2072,9 @@ void Shell::DoHostImportModuleDynamically(v8::Local<v8::Data> data) {
                                     ResolveModuleSourceCallback)
                 .FromMaybe(false)) {
           if (phase == v8::ModuleImportPhase::kEvaluation) {
-            MaybeLocal<Value> maybe_result = root_module->Evaluate(realm);
+            MaybeLocal<Promise> maybe_result = root_module->Evaluate(realm);
             if (maybe_result.IsEmpty()) break;
-            global_result_promise.Reset(
-                isolate, maybe_result.ToLocalChecked().As<Promise>());
+            global_result_promise.Reset(isolate, maybe_result.ToLocalChecked());
             global_namespace_or_source.Reset(
                 isolate, root_module->GetModuleNamespace(phase));
           } else {

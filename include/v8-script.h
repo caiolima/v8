@@ -18,6 +18,7 @@
 #include "v8-local-handle.h"  // NOLINT(build/include_directory)
 #include "v8-maybe.h"         // NOLINT(build/include_directory)
 #include "v8-message.h"       // NOLINT(build/include_directory)
+#include "v8-promise.h"       // NOLINT(build/include_directory)
 #include "v8config.h"         // NOLINT(build/include_directory)
 
 namespace v8 {
@@ -182,6 +183,57 @@ class V8_EXPORT ModuleRequest : public Data {
 };
 
 /**
+ * The result of evaluating a module, returned by Module::Evaluate().
+ *
+ * Module evaluation always produces a Promise (see Module::Evaluate), so this
+ * type implicitly converts to MaybeLocal<Promise>, which is the preferred way
+ * to consume the result. For backwards compatibility it also converts to
+ * MaybeLocal<Value> and forwards the usual MaybeLocal accessors, but that
+ * conversion is deprecated: embedders should migrate to MaybeLocal<Promise>.
+ */
+class ModuleEvaluationResult {
+ public:
+  /**
+   * Module evaluation always yields a Promise. This is the preferred
+   * conversion.
+   */
+  operator MaybeLocal<Promise>() const {
+    Local<Value> value;
+    if (!value_.ToLocal(&value)) return MaybeLocal<Promise>();
+    return value.As<Promise>();
+  }
+
+  /**
+   * Deprecated: module evaluation yields a Promise; consume the result as a
+   * MaybeLocal<Promise> instead.
+   */
+  V8_DEPRECATED("Module::Evaluate yields a Promise; use MaybeLocal<Promise>")
+  operator MaybeLocal<Value>() const { return value_; }
+
+  bool IsEmpty() const { return value_.IsEmpty(); }
+
+  template <class S>
+  V8_WARN_UNUSED_RESULT bool ToLocal(Local<S>* out) const {
+    return value_.ToLocal(out);
+  }
+
+  Local<Promise> ToLocalChecked() {
+    return value_.ToLocalChecked().As<Promise>();
+  }
+
+  template <class S>
+  Local<S> FromMaybe(Local<S> default_value) const {
+    return value_.FromMaybe(default_value);
+  }
+
+ private:
+  friend class Module;
+  explicit ModuleEvaluationResult(MaybeLocal<Value> value) : value_(value) {}
+
+  MaybeLocal<Value> value_;
+};
+
+/**
  * A compiled JavaScript module.
  */
 class V8_EXPORT Module : public Data {
@@ -280,7 +332,7 @@ class V8_EXPORT Module : public Data {
    *
    * If IsGraphAsync() is false, the returned Promise is settled.
    */
-  V8_WARN_UNUSED_RESULT MaybeLocal<Value> Evaluate(Local<Context> context);
+  V8_WARN_UNUSED_RESULT ModuleEvaluationResult Evaluate(Local<Context> context);
 
   /**
    * Evaluates async dependencies of a module and defer its evaluation
