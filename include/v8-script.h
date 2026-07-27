@@ -234,7 +234,8 @@ class ModuleEvaluationResult {
 
  private:
   friend class Module;
-  ModuleEvaluationResult(MaybeLocal<Promise> promise, bool should_unwrap)
+  explicit ModuleEvaluationResult(MaybeLocal<Promise> promise,
+                                  bool should_unwrap = false)
       : promise_(promise), should_unwrap_(should_unwrap) {}
 
   MaybeLocal<Promise> promise_;

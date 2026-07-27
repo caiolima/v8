@@ -291,12 +291,11 @@ ModuleEvaluationResult Module::Evaluate(Isolate* isolate,
           Cast<JSPromise>(module->top_level_capability()), isolate);
       DCHECK(top_level_capability->status() == Promise::kRejected &&
              top_level_capability->result() == module->exception());
-      return ModuleEvaluationResult(top_level_capability,
-                                    /*should_unwrap=*/false);
+      return ModuleEvaluationResult(top_level_capability);
     }
     DirectHandle<JSPromise> capability = isolate->factory()->NewJSPromise();
     JSPromise::Reject(capability, direct_handle(module->exception(), isolate));
-    return ModuleEvaluationResult(capability, /*should_unwrap=*/false);
+    return ModuleEvaluationResult(capability);
   }
 
   // Start of Evaluate () Concrete Method
@@ -321,9 +320,8 @@ ModuleEvaluationResult Module::Evaluate(Isolate* isolate,
   // 4. If module.[[TopLevelCapability]] is not EMPTY, then
   //    a. Return module.[[TopLevelCapability]].[[Promise]].
   if (IsJSPromise(module->top_level_capability())) {
-    return ModuleEvaluationResult(
-        direct_handle(Cast<JSPromise>(module->top_level_capability()), isolate),
-        /*should_unwrap=*/false);
+    return ModuleEvaluationResult(direct_handle(
+        Cast<JSPromise>(module->top_level_capability()), isolate));
   }
   DCHECK(IsUndefined(module->top_level_capability()));
 

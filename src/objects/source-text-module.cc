@@ -964,7 +964,7 @@ ModuleEvaluationResult SourceTextModule::Evaluate(
   }
 
   // 11. Return capability.[[Promise]].
-  return ModuleEvaluationResult(capability, /*should_unwrap=*/false);
+  return ModuleEvaluationResult(capability);
 }
 
 // https://tc39.es/ecma262/#sec-async-module-execution-fulfilled

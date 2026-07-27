@@ -2456,8 +2456,7 @@ ModuleEvaluationResult Module::Evaluate(Local<Context> context) {
   i::ModuleEvaluationResult i_result = i::Module::Evaluate(i_isolate, self);
   if (i_result.is_exception()) {
     // An exception was thrown during evaluation.
-    return ModuleEvaluationResult(MaybeLocal<Promise>(),
-                                  /*should_unwrap=*/false);
+    return ModuleEvaluationResult(MaybeLocal<Promise>());
   }
   i::DirectHandle<i::JSPromise> promise = i_result.promise().ToHandleChecked();
   return ModuleEvaluationResult(api_scope.Escape(Utils::ToLocal(promise)),

@@ -34,12 +34,12 @@ class ZoneForwardList;
 // evaluation steps returned a non-Promise value.
 class ModuleEvaluationResult {
  public:
-  ModuleEvaluationResult(MaybeDirectHandle<JSPromise> promise,
-                         bool should_unwrap)
+  explicit ModuleEvaluationResult(MaybeDirectHandle<JSPromise> promise,
+                                  bool should_unwrap = false)
       : promise_(promise), should_unwrap_(should_unwrap) {}
 
   static ModuleEvaluationResult Exception() {
-    return ModuleEvaluationResult(MaybeDirectHandle<JSPromise>(), false);
+    return ModuleEvaluationResult(MaybeDirectHandle<JSPromise>());
   }
 
   bool is_exception() const { return promise_.is_null(); }
