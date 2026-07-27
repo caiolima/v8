@@ -106,7 +106,7 @@ bool SyntheticModule::FinishInstantiate(Isolate* isolate,
 
 // Implements Synthetic Module Record's Evaluate concrete method:
 // https://heycam.github.io/webidl/#smr-evaluate
-MaybeDirectHandle<JSPromise> SyntheticModule::Evaluate(
+ModuleEvaluationResult SyntheticModule::Evaluate(
     Isolate* isolate, DirectHandle<SyntheticModule> module) {
   module->SetStatus(kEvaluating);
 
@@ -118,7 +118,7 @@ MaybeDirectHandle<JSPromise> SyntheticModule::Evaluate(
                         Utils::ToLocal(Cast<Module>(module)))
            .ToLocal(&result)) {
     module->RecordError(isolate, isolate->exception());
-    return MaybeDirectHandle<JSPromise>();
+    return ModuleEvaluationResult::Exception();
   }
 
   module->SetStatus(kEvaluated);
@@ -126,21 +126,24 @@ MaybeDirectHandle<JSPromise> SyntheticModule::Evaluate(
   DirectHandle<Object> result_from_callback = Utils::OpenDirectHandle(*result);
 
   DirectHandle<JSPromise> capability;
+  bool should_unwrap;
   if (IsJSPromise(*result_from_callback)) {
     capability = Cast<JSPromise>(result_from_callback);
+    should_unwrap = false;
   } else {
     // The host's evaluation steps should have returned a resolved Promise,
     // but as an allowance to hosts that have not yet finished the migration
-    // to top-level await, create a Promise if the callback result didn't give
-    // us one.
+    // to top-level await, wrap the non-Promise return in a resolved Promise.
+    // The deprecated MaybeLocal<Value> API unwraps this back to the returned
+    // value, so resolve the capability with it rather than with undefined.
     capability = isolate->factory()->NewJSPromise();
-    JSPromise::Resolve(capability, isolate->factory()->undefined_value())
-        .ToHandleChecked();
+    JSPromise::Resolve(capability, result_from_callback).ToHandleChecked();
+    should_unwrap = true;
   }
 
   module->set_top_level_capability(*capability);
 
-  return capability;
+  return ModuleEvaluationResult(capability, should_unwrap);
 }
 
 }  // namespace internal

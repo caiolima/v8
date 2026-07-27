@@ -232,8 +232,8 @@ V8_OBJECT class SourceTextModule : public Module {
                                        AvailableAncestorsSet* exec_list);
 
   // Implementation of spec concrete method Evaluate.
-  static V8_WARN_UNUSED_RESULT MaybeDirectHandle<JSPromise> Evaluate(
-      Isolate* isolate, Handle<SourceTextModule> module);
+  static V8_WARN_UNUSED_RESULT ModuleEvaluationResult
+  Evaluate(Isolate* isolate, Handle<SourceTextModule> module);
 
   // Implementation of spec abstract operation InnerModuleEvaluation.
   static V8_WARN_UNUSED_RESULT MaybeDirectHandle<Object> InnerModuleEvaluation(

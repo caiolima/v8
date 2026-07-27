@@ -274,8 +274,8 @@ bool Module::FinishInstantiate(Isolate* isolate, Handle<Module> module,
   }
 }
 
-MaybeDirectHandle<JSPromise> Module::Evaluate(Isolate* isolate,
-                                              Handle<Module> module) {
+ModuleEvaluationResult Module::Evaluate(Isolate* isolate,
+                                        Handle<Module> module) {
 #ifdef DEBUG
   PrintStatusMessage(*module, "Evaluating module ");
 #endif  // DEBUG
@@ -291,11 +291,12 @@ MaybeDirectHandle<JSPromise> Module::Evaluate(Isolate* isolate,
           Cast<JSPromise>(module->top_level_capability()), isolate);
       DCHECK(top_level_capability->status() == Promise::kRejected &&
              top_level_capability->result() == module->exception());
-      return top_level_capability;
+      return ModuleEvaluationResult(top_level_capability,
+                                    /*should_unwrap=*/false);
     }
     DirectHandle<JSPromise> capability = isolate->factory()->NewJSPromise();
     JSPromise::Reject(capability, direct_handle(module->exception(), isolate));
-    return capability;
+    return ModuleEvaluationResult(capability, /*should_unwrap=*/false);
   }
 
   // Start of Evaluate () Concrete Method
@@ -320,8 +321,9 @@ MaybeDirectHandle<JSPromise> Module::Evaluate(Isolate* isolate,
   // 4. If module.[[TopLevelCapability]] is not EMPTY, then
   //    a. Return module.[[TopLevelCapability]].[[Promise]].
   if (IsJSPromise(module->top_level_capability())) {
-    return direct_handle(Cast<JSPromise>(module->top_level_capability()),
-                         isolate);
+    return ModuleEvaluationResult(
+        direct_handle(Cast<JSPromise>(module->top_level_capability()), isolate),
+        /*should_unwrap=*/false);
   }
   DCHECK(IsUndefined(module->top_level_capability()));
 
@@ -508,11 +510,11 @@ void JSDeferredModuleNamespace::EvaluateModuleSync(
     return;
   }
 
-  MaybeDirectHandle<JSPromise> maybe_result = Module::Evaluate(isolate, module);
-  DirectHandle<JSPromise> promise;
-  if (!maybe_result.ToHandle(&promise)) {
+  ModuleEvaluationResult result = Module::Evaluate(isolate, module);
+  if (result.is_exception()) {
     return;
   }
+  DirectHandle<JSPromise> promise = result.promise().ToHandleChecked();
 
   // If there's a result, it needs to be a promise with either Reject or
   // Fulfilled status.

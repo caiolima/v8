@@ -2453,8 +2453,15 @@ ModuleEvaluationResult Module::Evaluate(Local<Context> context) {
   Utils::ApiCheck(self->status() >= i::Module::kLinked, "Module::Evaluate",
                   "Expected instantiated module");
 
-  return ModuleEvaluationResult(
-      api_scope.EscapeMaybe(i::Module::Evaluate(i_isolate, self)));
+  i::ModuleEvaluationResult i_result = i::Module::Evaluate(i_isolate, self);
+  if (i_result.is_exception()) {
+    // An exception was thrown during evaluation.
+    return ModuleEvaluationResult(MaybeLocal<Promise>(),
+                                  /*should_unwrap=*/false);
+  }
+  i::DirectHandle<i::JSPromise> promise = i_result.promise().ToHandleChecked();
+  return ModuleEvaluationResult(api_scope.Escape(Utils::ToLocal(promise)),
+                                i_result.should_unwrap());
 }
 
 MaybeLocal<Value> Module::EvaluateForImportDefer(Local<Context> context) {

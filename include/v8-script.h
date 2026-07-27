@@ -197,40 +197,48 @@ class ModuleEvaluationResult {
    * Module evaluation always yields a Promise. This is the preferred
    * conversion.
    */
-  operator MaybeLocal<Promise>() const {
-    Local<Value> value;
-    if (!value_.ToLocal(&value)) return MaybeLocal<Promise>();
-    return value.As<Promise>();
-  }
+  // NOLINTNEXTLINE(runtime/explicit,google-explicit-constructor)
+  operator MaybeLocal<Promise>() const { return promise_; }
 
   /**
    * Deprecated: module evaluation yields a Promise; consume the result as a
    * MaybeLocal<Promise> instead.
+   *
+   * This reproduces the legacy completion value. For a synthetic module whose
+   * evaluation steps returned a non-Promise value, that value (the resolved
+   * value of the wrapping Promise) is returned instead of the Promise itself;
+   * in every other case the Promise is returned.
    */
   V8_DEPRECATED("Module::Evaluate yields a Promise; use MaybeLocal<Promise>")
-  operator MaybeLocal<Value>() const { return value_; }
+  // NOLINTNEXTLINE(runtime/explicit,google-explicit-constructor)
+  operator MaybeLocal<Value>() const {
+    Local<Promise> promise;
+    if (!promise_.ToLocal(&promise)) return MaybeLocal<Value>();
+    if (!should_unwrap_) return promise;
+    return promise->Result();
+  }
 
-  bool IsEmpty() const { return value_.IsEmpty(); }
+  bool IsEmpty() const { return promise_.IsEmpty(); }
 
   template <class S>
   V8_WARN_UNUSED_RESULT bool ToLocal(Local<S>* out) const {
-    return value_.ToLocal(out);
+    return promise_.ToLocal(out);
   }
 
-  Local<Promise> ToLocalChecked() {
-    return value_.ToLocalChecked().As<Promise>();
-  }
+  Local<Promise> ToLocalChecked() { return promise_.ToLocalChecked(); }
 
   template <class S>
   Local<S> FromMaybe(Local<S> default_value) const {
-    return value_.FromMaybe(default_value);
+    return promise_.FromMaybe(default_value);
   }
 
  private:
   friend class Module;
-  explicit ModuleEvaluationResult(MaybeLocal<Value> value) : value_(value) {}
+  ModuleEvaluationResult(MaybeLocal<Promise> promise, bool should_unwrap)
+      : promise_(promise), should_unwrap_(should_unwrap) {}
 
-  MaybeLocal<Value> value_;
+  MaybeLocal<Promise> promise_;
+  bool should_unwrap_;
 };
 
 /**
