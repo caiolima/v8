@@ -24990,6 +24990,12 @@ v8::MaybeLocal<Value> SyntheticModuleEvaluationStepsCallbackSetExport(
   return v8::Undefined(reinterpret_cast<v8::Isolate*>(CcTest::isolate()));
 }
 
+v8::MaybeLocal<Value> SyntheticModuleEvaluationStepsCallbackReturnInteger(
+    Local<Context> context, Local<Module> module) {
+  return v8::Integer::New(reinterpret_cast<v8::Isolate*>(CcTest::isolate()),
+                          42);
+}
+
 namespace {
 
 Local<Module> CompileAndInstantiateModule(v8::Isolate* isolate,
@@ -25326,6 +25332,34 @@ TEST(SyntheticModuleEvaluationStepsNoThrow) {
   CHECK_EQ(module->GetStatus(), Module::kEvaluated);
 }
 
+TEST(SyntheticModuleEvaluationStepsReturnInteger) {
+  LocalContext env;
+  v8::Isolate* isolate = env.isolate();
+  v8::Isolate::Scope iscope(isolate);
+  v8::HandleScope scope(isolate);
+  v8::Local<v8::Context> context = v8::Context::New(isolate);
+  v8::Context::Scope cscope(context);
+
+  auto export_names = std::to_array<Local<v8::String>>({v8_str("default")});
+
+  Local<Module> module = CreateAndInstantiateSyntheticModule(
+      isolate,
+      v8_str("SyntheticModuleEvaluationStepsReturnInteger-TestSyntheticModule"),
+      context, export_names,
+      SyntheticModuleEvaluationStepsCallbackReturnInteger);
+
+  // When the evaluation steps return a non-Promise value, the module system
+  // wraps it in a Promise resolved with that value. The completion value is
+  // that Promise, and its result is the returned integer.
+  Local<Value> completion_value = module->Evaluate(context).ToLocalChecked();
+  CHECK(completion_value->IsPromise());
+  Local<v8::Promise> promise(Local<v8::Promise>::Cast(completion_value));
+  CHECK_EQ(promise->State(), v8::Promise::kFulfilled);
+  CHECK(promise->Result()->IsInt32());
+  CHECK_EQ(42, promise->Result()->Int32Value(context).FromJust());
+  CHECK_EQ(module->GetStatus(), Module::kEvaluated);
+}
+
 TEST(SyntheticModuleEvaluationStepsThrow) {
   synthetic_module_callback_count = 0;
   LocalContext env;
@@ -25343,7 +25377,7 @@ TEST(SyntheticModuleEvaluationStepsThrow) {
       context, export_names, SyntheticModuleEvaluationStepsCallbackFail);
   TryCatch try_catch(isolate);
   CHECK_EQ(synthetic_module_callback_count, 0);
-  v8::MaybeLocal<Promise> completion_value = module->Evaluate(context);
+  v8::MaybeLocal<Value> completion_value = module->Evaluate(context);
   CHECK(completion_value.IsEmpty());
   CHECK_EQ(synthetic_module_callback_count, 1);
   CHECK_EQ(module->GetStatus(), Module::kErrored);
@@ -25442,7 +25476,7 @@ TEST(ImportFromSyntheticModuleThrow) {
 
   CHECK_EQ(module->GetStatus(), Module::kInstantiated);
   TryCatch try_catch(isolate);
-  v8::MaybeLocal<Promise> completion_value = module->Evaluate(context);
+  v8::MaybeLocal<Value> completion_value = module->Evaluate(context);
   Local<v8::Promise> promise(
       Local<v8::Promise>::Cast(completion_value.ToLocalChecked()));
   CHECK_EQ(promise->State(), v8::Promise::kRejected);
@@ -25512,7 +25546,7 @@ TEST(ModuleEvaluateTerminateExecution) {
 
   CHECK_EQ(module->GetStatus(), Module::kInstantiated);
   TryCatch try_catch(isolate);
-  v8::MaybeLocal<Promise> completion_value = module->Evaluate(context);
+  v8::MaybeLocal<Value> completion_value = module->Evaluate(context);
   CHECK(completion_value.IsEmpty());
 
   CHECK_EQ(module->GetStatus(), Module::kErrored);
@@ -25553,7 +25587,7 @@ TEST(ModuleEvaluateImportTerminateExecution) {
 
   CHECK_EQ(module->GetStatus(), Module::kInstantiated);
   TryCatch try_catch(isolate);
-  v8::MaybeLocal<Promise> completion_value = module->Evaluate(context);
+  v8::MaybeLocal<Value> completion_value = module->Evaluate(context);
   Local<v8::Promise> promise(
       Local<v8::Promise>::Cast(completion_value.ToLocalChecked()));
   CHECK_EQ(promise->State(), v8::Promise::kPending);

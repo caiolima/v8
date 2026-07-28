@@ -25,32 +25,6 @@ class Zone;
 template <typename T>
 class ZoneForwardList;
 
-// The result of evaluating a module (see Module::Evaluate). It always carries
-// the module's top-level capability Promise; the promise is empty only when an
-// exception was thrown during evaluation. `should_unwrap` records whether an
-// embedder consuming the result through the deprecated v8::Module::Evaluate
-// MaybeLocal<Value> conversion should receive the Promise's resolved value
-// rather than the Promise itself. It is true only when a synthetic module's
-// evaluation steps returned a non-Promise value.
-class ModuleEvaluationResult {
- public:
-  explicit ModuleEvaluationResult(MaybeDirectHandle<JSPromise> promise,
-                                  bool should_unwrap = false)
-      : promise_(promise), should_unwrap_(should_unwrap) {}
-
-  static ModuleEvaluationResult Exception() {
-    return ModuleEvaluationResult(MaybeDirectHandle<JSPromise>());
-  }
-
-  bool is_exception() const { return promise_.is_null(); }
-  MaybeDirectHandle<JSPromise> promise() const { return promise_; }
-  bool should_unwrap() const { return should_unwrap_; }
-
- private:
-  MaybeDirectHandle<JSPromise> promise_;
-  bool should_unwrap_;
-};
-
 // Module is the base class for ECMAScript module types, roughly corresponding
 // to Abstract Module Record.
 // https://tc39.es/ecma262/#sec-abstract-module-records
@@ -98,8 +72,8 @@ V8_OBJECT class Module : public HeapObject {
       const UserResolveCallbacks& callbacks);
 
   // Implementation of spec operation ModuleEvaluation.
-  static V8_WARN_UNUSED_RESULT ModuleEvaluationResult
-  Evaluate(Isolate* isolate, Handle<Module> module);
+  static V8_WARN_UNUSED_RESULT MaybeDirectHandle<JSPromise> Evaluate(
+      Isolate* isolate, Handle<Module> module);
 
   // Get the namespace object for [module].  If it doesn't exist yet, it is
   // created.

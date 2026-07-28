@@ -908,7 +908,7 @@ bool SourceTextModule::MaybeHandleEvaluationException(
 }
 
 // https://tc39.es/ecma262/#sec-moduleevaluation
-ModuleEvaluationResult SourceTextModule::Evaluate(
+MaybeDirectHandle<JSPromise> SourceTextModule::Evaluate(
     Isolate* isolate, Handle<SourceTextModule> module) {
   CHECK(module->status() == kLinked || module->status() == kEvaluatingAsync ||
         module->status() == kEvaluated || module->status() == kErrored);
@@ -937,9 +937,7 @@ ModuleEvaluationResult SourceTextModule::Evaluate(
   try_catch.SetCaptureMessage(false);
   // TODO(verwaest): Return a bool from InnerModuleEvaluation instead?
   if (InnerModuleEvaluation(isolate, module, &stack, &dfs_index).is_null()) {
-    if (!module->MaybeHandleEvaluationException(isolate, &stack)) {
-      return ModuleEvaluationResult::Exception();
-    }
+    if (!module->MaybeHandleEvaluationException(isolate, &stack)) return {};
     CHECK(try_catch.HasCaught());
     // d. Perform ! Call(capability.[[Reject]], undefined,
     //                   «result.[[Value]]»).
@@ -964,7 +962,7 @@ ModuleEvaluationResult SourceTextModule::Evaluate(
   }
 
   // 11. Return capability.[[Promise]].
-  return ModuleEvaluationResult(capability);
+  return capability;
 }
 
 // https://tc39.es/ecma262/#sec-async-module-execution-fulfilled
@@ -1403,10 +1401,7 @@ MaybeDirectHandle<Object> SourceTextModule::InnerModuleEvaluation(
     } else {
       // b. Set index to ? InnerModuleEvaluation(requiredModule, stack, index).
       // (Out of order because InnerModuleEvaluation is type-driven.)
-      if (Module::Evaluate(isolate, requested_module).is_exception()) {
-        DCHECK(isolate->has_exception());
-        return {};
-      }
+      RETURN_ON_EXCEPTION(isolate, Module::Evaluate(isolate, requested_module));
     }
   }
 

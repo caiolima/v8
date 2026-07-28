@@ -2438,7 +2438,7 @@ Maybe<bool> Module::InstantiateModule(Local<Context> context,
   return Just(true);
 }
 
-ModuleEvaluationResult Module::Evaluate(Local<Context> context) {
+MaybeLocal<Value> Module::Evaluate(Local<Context> context) {
   auto i_isolate = i::Isolate::Current();
   TRACE_EVENT_CALL_STATS_SCOPED(i_isolate, "v8", "V8.Execute");
   EnterV8Scope<InternalEscapableScope> api_scope{i_isolate, context,
@@ -2453,14 +2453,7 @@ ModuleEvaluationResult Module::Evaluate(Local<Context> context) {
   Utils::ApiCheck(self->status() >= i::Module::kLinked, "Module::Evaluate",
                   "Expected instantiated module");
 
-  i::ModuleEvaluationResult i_result = i::Module::Evaluate(i_isolate, self);
-  if (i_result.is_exception()) {
-    // An exception was thrown during evaluation.
-    return ModuleEvaluationResult(MaybeLocal<Promise>());
-  }
-  i::DirectHandle<i::JSPromise> promise = i_result.promise().ToHandleChecked();
-  return ModuleEvaluationResult(api_scope.Escape(Utils::ToLocal(promise)),
-                                i_result.should_unwrap());
+  return api_scope.EscapeMaybe(i::Module::Evaluate(i_isolate, self));
 }
 
 MaybeLocal<Value> Module::EvaluateForImportDefer(Local<Context> context) {
@@ -2491,13 +2484,14 @@ MaybeLocal<Value> Module::EvaluateForImportDefer(Local<Context> context) {
   for (size_t i = 0; i < evaluation_list.size(); i++) {
     i::Handle<i::Module> dep_module = evaluation_list[i];
     Local<Module> v8_dep_module = Utils::ToLocal(dep_module);
-    MaybeLocal<Promise> maybe_eval_result = v8_dep_module->Evaluate(context);
+    MaybeLocal<Value> maybe_eval_result = v8_dep_module->Evaluate(context);
     if (maybe_eval_result.IsEmpty()) {
       return api_scope.EscapeMaybe(MaybeLocal<Value>());
     }
-    Local<Promise> eval_result = maybe_eval_result.ToLocalChecked();
+    Local<Value> eval_result = maybe_eval_result.ToLocalChecked();
+    CHECK(eval_result->IsPromise());
     i::DirectHandle<i::JSPromise> promise_handle =
-        Utils::OpenDirectHandle(*eval_result);
+        Utils::OpenDirectHandle(*eval_result.As<Promise>());
     promises.push_back(promise_handle);
   }
 

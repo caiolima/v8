@@ -266,7 +266,7 @@ TEST_F(ModuleTest, ModuleInstantiationWithImportAttributes) {
           .FromJust());
   CHECK_EQ(Module::kInstantiated, module->GetStatus());
 
-  MaybeLocal<Promise> result = module->Evaluate(context());
+  MaybeLocal<Value> result = module->Evaluate(context());
   CHECK_EQ(Module::kEvaluated, module->GetStatus());
   Local<Promise> promise = Local<Promise>::Cast(result.ToLocalChecked());
   CHECK_EQ(promise->State(), v8::Promise::kFulfilled);
@@ -404,7 +404,7 @@ TEST_F(ModuleTest, ModuleEvaluation) {
             .FromJust());
   CHECK_EQ(Module::kInstantiated, module->GetStatus());
 
-  MaybeLocal<Promise> result = module->Evaluate(context());
+  MaybeLocal<Value> result = module->Evaluate(context());
   CHECK_EQ(Module::kEvaluated, module->GetStatus());
   Local<Promise> promise = result.ToLocalChecked().As<Promise>();
   CHECK_EQ(promise->State(), v8::Promise::kFulfilled);
@@ -441,7 +441,7 @@ TEST_F(ModuleTest, ModuleEvaluationError1) {
 
   {
     v8::TryCatch inner_try_catch(isolate());
-    MaybeLocal<Promise> result = module->Evaluate(context());
+    MaybeLocal<Value> result = module->Evaluate(context());
     CHECK_EQ(Module::kErrored, module->GetStatus());
     Local<Value> exception = module->GetException();
     CHECK(exception->StrictEquals(NewString("boom")));
@@ -463,7 +463,7 @@ TEST_F(ModuleTest, ModuleEvaluationError1) {
 
   {
     v8::TryCatch inner_try_catch(isolate());
-    MaybeLocal<Promise> result = module->Evaluate(context());
+    MaybeLocal<Value> result = module->Evaluate(context());
     CHECK_EQ(Module::kErrored, module->GetStatus());
     Local<Value> exception = module->GetException();
     CHECK(exception->StrictEquals(NewString("boom")));
@@ -525,7 +525,7 @@ TEST_F(ModuleTest, ModuleEvaluationError2) {
 
   {
     v8::TryCatch inner_try_catch(isolate());
-    MaybeLocal<Promise> result = failure_module->Evaluate(context());
+    MaybeLocal<Value> result = failure_module->Evaluate(context());
     CHECK_EQ(Module::kErrored, failure_module->GetStatus());
     Local<Value> exception = failure_module->GetException();
     CHECK(exception->StrictEquals(NewString("boom")));
@@ -556,7 +556,7 @@ TEST_F(ModuleTest, ModuleEvaluationError2) {
 
   {
     v8::TryCatch inner_try_catch(isolate());
-    MaybeLocal<Promise> result = dependent_module->Evaluate(context());
+    MaybeLocal<Value> result = dependent_module->Evaluate(context());
     CHECK_EQ(Module::kErrored, dependent_module->GetStatus());
     Local<Value> exception = dependent_module->GetException();
     CHECK(exception->StrictEquals(NewString("boom")));
@@ -1443,7 +1443,7 @@ TEST_F(ModuleTest, ModuleInstantiationByIndex) {
   CHECK_EQ(Module::kInstantiated, module->GetStatus());
 
   // Verify evaluation works
-  MaybeLocal<Promise> result = module->Evaluate(context());
+  MaybeLocal<Value> result = module->Evaluate(context());
   CHECK_EQ(Module::kEvaluated, module->GetStatus());
   Local<Promise> promise = Local<Promise>::Cast(result.ToLocalChecked());
   CHECK_EQ(promise->State(), v8::Promise::kFulfilled);
@@ -1638,7 +1638,7 @@ TEST_F(ModuleTest, ModuleInstantiationByIndexWithSource) {
   CHECK_EQ(Module::kInstantiated, module->GetStatus());
 
   // Verify evaluation works
-  MaybeLocal<Promise> result = module->Evaluate(context());
+  MaybeLocal<Value> result = module->Evaluate(context());
   CHECK_EQ(Module::kEvaluated, module->GetStatus());
   Local<Promise> promise = Local<Promise>::Cast(result.ToLocalChecked());
   CHECK_EQ(promise->State(), v8::Promise::kFulfilled);
@@ -1790,30 +1790,6 @@ TEST_F(ModuleTest, SyntheticModuleGetResourceNameInError) {
   CHECK(module->Evaluate(context()).IsEmpty());
   CHECK_EQ(Module::kErrored, module->GetStatus());
   CHECK(module->GetResourceName()->StrictEquals(resource_name));
-}
-
-TEST_F(ModuleTest, SyntheticModuleEvaluateReturnsPromise) {
-  HandleScope scope(isolate());
-  Local<Module> module = Module::CreateSyntheticModule(
-      isolate(), NewString("synthetic-module"), {},
-      [](Local<Context> context, Local<Module> module) -> MaybeLocal<Value> {
-        // Return a non-promise value; the module system is expected to wrap
-        // it in a resolved promise.
-        return v8::Undefined(Isolate::GetCurrent());
-      });
-
-  CHECK(module
-            ->InstantiateModule(context(),
-                                ResolveModuleByIndexUnreachableCallback)
-            .FromJust());
-  CHECK_EQ(Module::kInstantiated, module->GetStatus());
-
-  Local<Value> completion_value = module->Evaluate(context()).ToLocalChecked();
-  CHECK_EQ(Module::kEvaluated, module->GetStatus());
-  CHECK(completion_value->IsPromise());
-  Local<Promise> promise = completion_value.As<Promise>();
-  CHECK_EQ(v8::Promise::kFulfilled, promise->State());
-  CHECK(promise->Result()->IsUndefined());
 }
 
 }  // anonymous namespace

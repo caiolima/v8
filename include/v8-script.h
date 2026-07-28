@@ -18,7 +18,6 @@
 #include "v8-local-handle.h"  // NOLINT(build/include_directory)
 #include "v8-maybe.h"         // NOLINT(build/include_directory)
 #include "v8-message.h"       // NOLINT(build/include_directory)
-#include "v8-promise.h"       // NOLINT(build/include_directory)
 #include "v8config.h"         // NOLINT(build/include_directory)
 
 namespace v8 {
@@ -183,66 +182,6 @@ class V8_EXPORT ModuleRequest : public Data {
 };
 
 /**
- * The result of evaluating a module, returned by Module::Evaluate().
- *
- * Module evaluation always produces a Promise (see Module::Evaluate), so this
- * type implicitly converts to MaybeLocal<Promise>, which is the preferred way
- * to consume the result. For backwards compatibility it also converts to
- * MaybeLocal<Value> and forwards the usual MaybeLocal accessors, but that
- * conversion is deprecated: embedders should migrate to MaybeLocal<Promise>.
- */
-class ModuleEvaluationResult {
- public:
-  /**
-   * Module evaluation always yields a Promise. This is the preferred
-   * conversion.
-   */
-  // NOLINTNEXTLINE(runtime/explicit,google-explicit-constructor)
-  operator MaybeLocal<Promise>() const { return promise_; }
-
-  /**
-   * Deprecated: module evaluation yields a Promise; consume the result as a
-   * MaybeLocal<Promise> instead.
-   *
-   * This reproduces the legacy completion value. For a synthetic module whose
-   * evaluation steps returned a non-Promise value, that value (the resolved
-   * value of the wrapping Promise) is returned instead of the Promise itself;
-   * in every other case the Promise is returned.
-   */
-  V8_DEPRECATED("Module::Evaluate yields a Promise; use MaybeLocal<Promise>")
-  // NOLINTNEXTLINE(runtime/explicit,google-explicit-constructor)
-  operator MaybeLocal<Value>() const {
-    Local<Promise> promise;
-    if (!promise_.ToLocal(&promise)) return MaybeLocal<Value>();
-    if (!should_unwrap_) return promise;
-    return promise->Result();
-  }
-
-  bool IsEmpty() const { return promise_.IsEmpty(); }
-
-  template <class S>
-  V8_WARN_UNUSED_RESULT bool ToLocal(Local<S>* out) const {
-    return promise_.ToLocal(out);
-  }
-
-  Local<Promise> ToLocalChecked() { return promise_.ToLocalChecked(); }
-
-  template <class S>
-  Local<S> FromMaybe(Local<S> default_value) const {
-    return promise_.FromMaybe(default_value);
-  }
-
- private:
-  friend class Module;
-  explicit ModuleEvaluationResult(MaybeLocal<Promise> promise,
-                                  bool should_unwrap = false)
-      : promise_(promise), should_unwrap_(should_unwrap) {}
-
-  MaybeLocal<Promise> promise_;
-  bool should_unwrap_;
-};
-
-/**
  * A compiled JavaScript module.
  */
 class V8_EXPORT Module : public Data {
@@ -341,7 +280,7 @@ class V8_EXPORT Module : public Data {
    *
    * If IsGraphAsync() is false, the returned Promise is settled.
    */
-  V8_WARN_UNUSED_RESULT ModuleEvaluationResult Evaluate(Local<Context> context);
+  V8_WARN_UNUSED_RESULT MaybeLocal<Value> Evaluate(Local<Context> context);
 
   /**
    * Evaluates async dependencies of a module and defer its evaluation

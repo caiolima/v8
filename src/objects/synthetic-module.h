@@ -70,8 +70,8 @@ V8_OBJECT class SyntheticModule : public Module {
   static V8_WARN_UNUSED_RESULT bool FinishInstantiate(
       Isolate* isolate, DirectHandle<SyntheticModule> module);
 
-  static V8_WARN_UNUSED_RESULT ModuleEvaluationResult
-  Evaluate(Isolate* isolate, DirectHandle<SyntheticModule> module);
+  static V8_WARN_UNUSED_RESULT MaybeDirectHandle<JSPromise> Evaluate(
+      Isolate* isolate, DirectHandle<SyntheticModule> module);
 
  public:
   TaggedMember<String> name_;
