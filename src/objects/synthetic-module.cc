@@ -124,21 +124,9 @@ MaybeDirectHandle<JSPromise> SyntheticModule::Evaluate(
   module->SetStatus(kEvaluated);
 
   DirectHandle<Object> result_from_callback = Utils::OpenDirectHandle(*result);
-
-  DirectHandle<JSPromise> capability;
-  if (IsJSPromise(*result_from_callback)) {
-    capability = Cast<JSPromise>(result_from_callback);
-  } else {
-    // The host's evaluation steps should have returned a resolved Promise,
-    // but as an allowance to hosts that have not yet finished the migration
-    // to top-level await, wrap the non-Promise return in a Promise resolved
-    // with the returned value.
-    capability = isolate->factory()->NewJSPromise();
-    JSPromise::Resolve(capability, result_from_callback).ToHandleChecked();
-  }
-
+  CHECK(IsJSPromise(*result_from_callback));
+  DirectHandle<JSPromise> capability = Cast<JSPromise>(result_from_callback);
   module->set_top_level_capability(*capability);
-
   return capability;
 }
 

@@ -24971,7 +24971,11 @@ static int synthetic_module_callback_count;
 v8::MaybeLocal<Value> SyntheticModuleEvaluationStepsCallback(
     Local<Context> context, Local<Module> module) {
   synthetic_module_callback_count++;
-  return v8::Undefined(reinterpret_cast<v8::Isolate*>(CcTest::isolate()));
+  // Synthetic module evaluation steps must return a Promise.
+  Local<v8::Promise::Resolver> resolver =
+      v8::Promise::Resolver::New(context).ToLocalChecked();
+  resolver->Resolve(context, v8::Undefined(CcTest::isolate())).Check();
+  return resolver->GetPromise();
 }
 
 v8::MaybeLocal<Value> SyntheticModuleEvaluationStepsCallbackFail(
@@ -24987,13 +24991,11 @@ v8::MaybeLocal<Value> SyntheticModuleEvaluationStepsCallbackSetExport(
   Maybe<bool> set_export_result = module->SetSyntheticModuleExport(
       CcTest::isolate(), v8_str("test_export"), v8_num(42));
   CHECK(set_export_result.FromJust());
-  return v8::Undefined(reinterpret_cast<v8::Isolate*>(CcTest::isolate()));
-}
-
-v8::MaybeLocal<Value> SyntheticModuleEvaluationStepsCallbackReturnInteger(
-    Local<Context> context, Local<Module> module) {
-  return v8::Integer::New(reinterpret_cast<v8::Isolate*>(CcTest::isolate()),
-                          42);
+  // Synthetic module evaluation steps must return a Promise.
+  Local<v8::Promise::Resolver> resolver =
+      v8::Promise::Resolver::New(context).ToLocalChecked();
+  resolver->Resolve(context, v8::Undefined(CcTest::isolate())).Check();
+  return resolver->GetPromise();
 }
 
 namespace {
@@ -25329,34 +25331,6 @@ TEST(SyntheticModuleEvaluationStepsNoThrow) {
   CHECK_EQ(promise->State(), v8::Promise::kFulfilled);
   CHECK(promise->Result()->IsUndefined());
   CHECK_EQ(synthetic_module_callback_count, 1);
-  CHECK_EQ(module->GetStatus(), Module::kEvaluated);
-}
-
-TEST(SyntheticModuleEvaluationStepsReturnInteger) {
-  LocalContext env;
-  v8::Isolate* isolate = env.isolate();
-  v8::Isolate::Scope iscope(isolate);
-  v8::HandleScope scope(isolate);
-  v8::Local<v8::Context> context = v8::Context::New(isolate);
-  v8::Context::Scope cscope(context);
-
-  auto export_names = std::to_array<Local<v8::String>>({v8_str("default")});
-
-  Local<Module> module = CreateAndInstantiateSyntheticModule(
-      isolate,
-      v8_str("SyntheticModuleEvaluationStepsReturnInteger-TestSyntheticModule"),
-      context, export_names,
-      SyntheticModuleEvaluationStepsCallbackReturnInteger);
-
-  // When the evaluation steps return a non-Promise value, the module system
-  // wraps it in a Promise resolved with that value. The completion value is
-  // that Promise, and its result is the returned integer.
-  Local<Value> completion_value = module->Evaluate(context).ToLocalChecked();
-  CHECK(completion_value->IsPromise());
-  Local<v8::Promise> promise(Local<v8::Promise>::Cast(completion_value));
-  CHECK_EQ(promise->State(), v8::Promise::kFulfilled);
-  CHECK(promise->Result()->IsInt32());
-  CHECK_EQ(42, promise->Result()->Int32Value(context).FromJust());
   CHECK_EQ(module->GetStatus(), Module::kEvaluated);
 }
 
