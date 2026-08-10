@@ -109,23 +109,39 @@ bool SyntheticModule::FinishInstantiate(Isolate* isolate,
 MaybeDirectHandle<JSPromise> SyntheticModule::Evaluate(
     Isolate* isolate, DirectHandle<SyntheticModule> module) {
   module->SetStatus(kEvaluating);
+  Address raw_evaluation_steps =
+      module->evaluation_steps()->foreign_address<kSyntheticModuleTag>();
+  v8::Local<v8::Context> context = Utils::ToLocal(isolate->native_context());
+  v8::Local<v8::Module> api_module = Utils::ToLocal(Cast<Module>(module));
 
-  v8::Module::SyntheticModuleEvaluationSteps evaluation_steps =
-      FUNCTION_CAST<v8::Module::SyntheticModuleEvaluationSteps>(
-          module->evaluation_steps()->foreign_address<kSyntheticModuleTag>());
-  v8::Local<v8::Value> result;
-  if (!evaluation_steps(Utils::ToLocal(isolate->native_context()),
-                        Utils::ToLocal(Cast<Module>(module)))
-           .ToLocal(&result)) {
-    module->RecordError(isolate, isolate->exception());
-    return MaybeDirectHandle<JSPromise>();
+  DirectHandle<JSPromise> capability;
+  if (module->steps_return_promise()) {
+    auto evaluation_steps =
+        FUNCTION_CAST<v8::Module::SyntheticModuleEvaluationSteps>(
+            raw_evaluation_steps);
+    v8::Local<v8::Promise> result;
+    if (!evaluation_steps(context, api_module).ToLocal(&result)) {
+      module->RecordError(isolate, isolate->exception());
+      return MaybeDirectHandle<JSPromise>();
+    }
+    capability = Cast<JSPromise>(Utils::OpenDirectHandle(*result));
+  } else {
+    auto evaluation_steps =
+        FUNCTION_CAST<v8::Module::LegacySyntheticModuleEvaluationSteps>(
+            raw_evaluation_steps);
+    v8::Local<v8::Value> result;
+    if (!evaluation_steps(context, api_module).ToLocal(&result)) {
+      module->RecordError(isolate, isolate->exception());
+      return MaybeDirectHandle<JSPromise>();
+    }
+    DirectHandle<Object> result_from_callback =
+        Utils::OpenDirectHandle(*result);
+    CHECK(IsJSPromise(*result_from_callback));
+    capability = Cast<JSPromise>(result_from_callback);
   }
 
   module->SetStatus(kEvaluated);
 
-  DirectHandle<Object> result_from_callback = Utils::OpenDirectHandle(*result);
-  CHECK(IsJSPromise(*result_from_callback));
-  DirectHandle<JSPromise> capability = Cast<JSPromise>(result_from_callback);
   module->set_top_level_capability(*capability);
   return capability;
 }

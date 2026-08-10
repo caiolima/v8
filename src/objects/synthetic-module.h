@@ -5,6 +5,7 @@
 #ifndef V8_OBJECTS_SYNTHETIC_MODULE_H_
 #define V8_OBJECTS_SYNTHETIC_MODULE_H_
 
+#include "src/base/bit-field.h"
 #include "src/objects/module.h"
 
 // Has to be the last include (doesn't have include guards):
@@ -56,6 +57,18 @@ V8_OBJECT class SyntheticModule : public Module {
   inline void set_host_defined_options(
       Tagged<Object> value, WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
 
+  inline uint32_t flags() const;
+  inline void set_flags(uint32_t value);
+
+  // Whether evaluation_steps() points at a callback returning a
+  // v8::MaybeLocal<v8::Promise> or, for the deprecated version, a
+  // v8::MaybeLocal<v8::Value>. The callback must be called through the exact
+  // signature it was defined with.
+  inline bool steps_return_promise() const;
+
+  using StepsReturnPromiseBit = base::BitField<bool, 0, 1, uint32_t>;
+  friend class TorqueGeneratedBitFieldAsserts;
+
  private:
   friend class Module;
 
@@ -78,6 +91,7 @@ V8_OBJECT class SyntheticModule : public Module {
   TaggedMember<FixedArray> export_names_;
   TaggedMember<Foreign> evaluation_steps_;
   TaggedMember<Object> host_defined_options_;
+  TaggedMember<Smi> flags_;
 } V8_OBJECT_END;
 
 template <>

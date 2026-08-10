@@ -3994,7 +3994,7 @@ DirectHandle<SourceTextModule> Factory::NewSourceTextModule(
 
 Handle<SyntheticModule> Factory::NewSyntheticModule(
     DirectHandle<String> module_name, DirectHandle<FixedArray> export_names,
-    v8::Module::SyntheticModuleEvaluationSteps evaluation_steps,
+    Address evaluation_steps, bool steps_return_promise,
     DirectHandle<Object> host_defined_options) {
   ReadOnlyRoots roots(isolate());
 
@@ -4003,8 +4003,7 @@ Handle<SyntheticModule> Factory::NewSyntheticModule(
       ObjectHashTable::New(isolate(), exports_len);
 
   DirectHandle<Foreign> evaluation_steps_foreign =
-      NewForeign<kSyntheticModuleTag>(
-          reinterpret_cast<Address>(evaluation_steps));
+      NewForeign<kSyntheticModuleTag>(evaluation_steps);
 
   Tagged<SyntheticModule> module =
       Cast<SyntheticModule>(New(synthetic_module_map(), AllocationType::kOld));
@@ -4021,6 +4020,8 @@ Handle<SyntheticModule> Factory::NewSyntheticModule(
   module->set_exports(*exports);
   module->set_evaluation_steps(*evaluation_steps_foreign);
   module->set_host_defined_options(*host_defined_options);
+  module->set_flags(
+      SyntheticModule::StepsReturnPromiseBit::encode(steps_return_promise));
   return handle(module, isolate());
 }
 

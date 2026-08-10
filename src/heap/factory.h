@@ -943,9 +943,14 @@ class V8_EXPORT_PRIVATE Factory : public FactoryBase<Factory> {
 
   DirectHandle<SourceTextModule> NewSourceTextModule(
       DirectHandle<SharedFunctionInfo> code);
+  // `evaluation_steps` is the address of the embedder callback run on
+  // evaluation. `steps_return_promise` tells whether it returns a
+  // v8::MaybeLocal<v8::Promise> or, for the deprecated version, a
+  // v8::MaybeLocal<v8::Value>; it must be called through the exact signature it
+  // was defined with.
   Handle<SyntheticModule> NewSyntheticModule(
       DirectHandle<String> module_name, DirectHandle<FixedArray> export_names,
-      v8::Module::SyntheticModuleEvaluationSteps evaluation_steps,
+      Address evaluation_steps, bool steps_return_promise,
       DirectHandle<Object> host_defined_options);
 
   Handle<JSArrayBuffer> NewJSArrayBuffer(

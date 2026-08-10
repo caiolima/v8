@@ -350,9 +350,15 @@ class V8_EXPORT Module : public Data {
    * exception was thrown) and return an empy MaybeLocal to indicate falure
    * (where an exception was thrown).
    */
-  // TODO(caiolima): Change this to `MaybeLocal<Promise>` given it's expected a
-  // Promise as return.
   using SyntheticModuleEvaluationSteps =
+      MaybeLocal<Promise> (*)(Local<Context> context, Local<Module> module);
+
+  /*
+   * Deprecated version of SyntheticModuleEvaluationSteps: the returned value is
+   * still required to be a Promise, but that is only enforced at runtime.
+   */
+  // TODO(caiolima): Remove once all embedders return a MaybeLocal<Promise>.
+  using LegacySyntheticModuleEvaluationSteps =
       MaybeLocal<Value> (*)(Local<Context> context, Local<Module> module);
 
   /**
@@ -366,6 +372,14 @@ class V8_EXPORT Module : public Data {
       Isolate* isolate, Local<String> module_name,
       const std::span<const Local<String>>& export_names,
       SyntheticModuleEvaluationSteps evaluation_steps,
+      Local<Data> host_defined_options = Local<Data>());
+
+  // TODO(caiolima): Mark this V8_DEPRECATED once embedders have been
+  // migrated to the overload above, then V8_DEPRECATED, then remove it.
+  static Local<Module> CreateSyntheticModule(
+      Isolate* isolate, Local<String> module_name,
+      const std::span<const Local<String>>& export_names,
+      LegacySyntheticModuleEvaluationSteps evaluation_steps,
       Local<Data> host_defined_options = Local<Data>());
 
   /**
