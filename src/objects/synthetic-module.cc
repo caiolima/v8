@@ -5,6 +5,7 @@
 #include "src/objects/synthetic-module.h"
 
 #include "src/api/api-inl.h"
+#include "src/base/macros.h"
 #include "src/builtins/accessors.h"
 #include "src/objects/js-generator-inl.h"
 #include "src/objects/module-inl.h"
@@ -106,42 +107,37 @@ bool SyntheticModule::FinishInstantiate(Isolate* isolate,
 
 // Implements Synthetic Module Record's Evaluate concrete method:
 // https://heycam.github.io/webidl/#smr-evaluate
+// The callback may have been created through the deprecated
+// v8::Module::LegacySyntheticModuleEvaluationSteps overload, in which case it
+// actually returns a v8::MaybeLocal<v8::Value> and is called here through a
+// mismatching signature. Both return types are pointer-sized, trivially
+// copyable handle wrappers, so this is safe in practice, but it does trip
+// CFI's and UBSan's indirect call checks.
+// TODO(https://crbug.com/545375591): Remove DISABLE_CFI_ICALL once the
+// deprecated overload is gone.
+DISABLE_CFI_ICALL
 MaybeDirectHandle<JSPromise> SyntheticModule::Evaluate(
     Isolate* isolate, DirectHandle<SyntheticModule> module) {
   module->SetStatus(kEvaluating);
-  Address raw_evaluation_steps =
-      module->evaluation_steps()->foreign_address<kSyntheticModuleTag>();
-  v8::Local<v8::Context> context = Utils::ToLocal(isolate->native_context());
-  v8::Local<v8::Module> api_module = Utils::ToLocal(Cast<Module>(module));
 
-  DirectHandle<JSPromise> capability;
-  if (module->steps_return_promise()) {
-    auto evaluation_steps =
-        FUNCTION_CAST<v8::Module::SyntheticModuleEvaluationSteps>(
-            raw_evaluation_steps);
-    v8::Local<v8::Promise> result;
-    if (!evaluation_steps(context, api_module).ToLocal(&result)) {
-      module->RecordError(isolate, isolate->exception());
-      return MaybeDirectHandle<JSPromise>();
-    }
-    capability = Cast<JSPromise>(Utils::OpenDirectHandle(*result));
-  } else {
-    auto evaluation_steps =
-        FUNCTION_CAST<v8::Module::LegacySyntheticModuleEvaluationSteps>(
-            raw_evaluation_steps);
-    v8::Local<v8::Value> result;
-    if (!evaluation_steps(context, api_module).ToLocal(&result)) {
-      module->RecordError(isolate, isolate->exception());
-      return MaybeDirectHandle<JSPromise>();
-    }
-    DirectHandle<Object> result_from_callback =
-        Utils::OpenDirectHandle(*result);
-    CHECK(IsJSPromise(*result_from_callback));
-    capability = Cast<JSPromise>(result_from_callback);
+  v8::Module::SyntheticModuleEvaluationSteps evaluation_steps =
+      FUNCTION_CAST<v8::Module::SyntheticModuleEvaluationSteps>(
+          module->evaluation_steps()->foreign_address<kSyntheticModuleTag>());
+  // Deliberately received as a v8::Local<v8::Value>: the deprecated callback
+  // signature only promises a Promise, it doesn't guarantee one.
+  v8::Local<v8::Value> result;
+  if (!evaluation_steps(Utils::ToLocal(isolate->native_context()),
+                        Utils::ToLocal(Cast<Module>(module)))
+           .ToLocal(&result)) {
+    module->RecordError(isolate, isolate->exception());
+    return MaybeDirectHandle<JSPromise>();
   }
 
   module->SetStatus(kEvaluated);
 
+  DirectHandle<Object> result_from_callback = Utils::OpenDirectHandle(*result);
+  CHECK(IsJSPromise(*result_from_callback));
+  DirectHandle<JSPromise> capability = Cast<JSPromise>(result_from_callback);
   module->set_top_level_capability(*capability);
   return capability;
 }

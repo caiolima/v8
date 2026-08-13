@@ -45,15 +45,6 @@ void SyntheticModule::set_host_defined_options(Tagged<Object> value,
                                                WriteBarrierMode mode) {
   host_defined_options_.store(this, value, mode);
 }
-
-uint32_t SyntheticModule::flags() const { return flags_.load().value(); }
-void SyntheticModule::set_flags(uint32_t value) {
-  flags_.store(this, Smi::FromInt(value));
-}
-
-bool SyntheticModule::steps_return_promise() const {
-  return StepsReturnPromiseBit::decode(flags());
-}
 }  // namespace internal
 }  // namespace v8
 

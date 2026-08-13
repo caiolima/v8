@@ -25030,7 +25030,7 @@ v8::MaybeLocal<Promise> SyntheticModuleEvaluationStepsCallbackFail(
 
 // Deprecated version of the evaluation steps, returning a MaybeLocal<Value>
 // that holds a Promise.
-// TODO(caiolima): Remove together with
+// TODO(https://crbug.com/545375591): Remove together with
 // v8::Module::LegacySyntheticModuleEvaluationSteps.
 v8::MaybeLocal<Value> LegacySyntheticModuleEvaluationStepsCallback(
     Local<Context> context, Local<Module> module) {
@@ -25390,7 +25390,7 @@ TEST(SyntheticModuleEvaluationStepsNoThrow) {
 
 // Covers the deprecated evaluation steps version, where the returned Promise is
 // only checked at runtime.
-// TODO(caiolima): Remove together with
+// TODO(https://crbug.com/545375591): Remove together with
 // v8::Module::LegacySyntheticModuleEvaluationSteps.
 TEST(SyntheticModuleEvaluationStepsLegacyCallback) {
   synthetic_module_callback_count = 0;
@@ -25403,11 +25403,13 @@ TEST(SyntheticModuleEvaluationStepsLegacyCallback) {
 
   auto export_names = std::to_array<Local<v8::String>>({v8_str("default")});
 
+  START_ALLOW_USE_DEPRECATED()
   Local<Module> module = v8::Module::CreateSyntheticModule(
       isolate,
       v8_str("SyntheticModuleEvaluationStepsLegacyCallback-"
              "TestSyntheticModule"),
       export_names, LegacySyntheticModuleEvaluationStepsCallback);
+  END_ALLOW_USE_DEPRECATED()
   module->InstantiateModule(context, UnexpectedModuleResolveCallback)
       .ToChecked();
 
