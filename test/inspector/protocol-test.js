@@ -175,6 +175,12 @@ InspectorTest.ContextGroup = class {
     utils.compileAndRunWithOrigin(this.id, string, url, lineOffset || 0, columnOffset || 0, true);
   }
 
+  // Registers a module so that it can be resolved as a dependency, but leaves
+  // it unevaluated. Used to set up the target of an `import defer`.
+  addModuleWithoutEvaluating(string, url, lineOffset, columnOffset) {
+    utils.compileAndRunWithOrigin(this.id, string, url, lineOffset || 0, columnOffset || 0, true, false);
+  }
+
   loadScript(fileName) {
     this.addScript(utils.read(fileName));
   }
