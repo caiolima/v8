@@ -1934,7 +1934,7 @@ TEST_F(ModuleTest, ExportStarMissingDefaultUseCounter) {
 // leave the module's exception pending on the isolate while the top-level
 // capability is rejected. V8 calls HostPromiseRejectionTracker from that
 // rejection, and the host is entitled to call back into V8 -- including into
-// paths that assert no exception is pending. See crbug.com/NNNNNN.
+// paths that assert no exception is pending. See crbug.com/550083806.
 namespace {
 
 v8::Global<Module> deferred_throwing_dependency;
