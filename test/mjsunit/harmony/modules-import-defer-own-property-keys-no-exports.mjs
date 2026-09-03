@@ -11,8 +11,7 @@ import defer * as ns from './modules-skip-import-defer-no-exports.mjs';
 assertEquals(0, globalThis.eval_list.length);
 
 // A side-effect-only module has no export to read, so [[OwnPropertyKeys]] is
-// the only way to force its evaluation. The inspector relies on this to offer
-// an evaluate action for such a module.
+// the a way to force its evaluation.
 assertArrayEquals([], Object.keys(ns));
 
 assertArrayEquals(['defer-no-exports'], globalThis.eval_list);
