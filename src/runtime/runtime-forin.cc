@@ -80,7 +80,6 @@ MaybeDirectHandle<Object> HasEnumerableProperty(
         // [[GetOwnProperty]] on deferred namespace object.
         DirectHandle<JSModuleNamespace> ns = it.GetHolder<JSModuleNamespace>();
         if (IsJSDeferredModuleNamespace(*ns)) {
-          Isolate* isolate = it.isolate();
           DirectHandle<Name> name = it.GetName();
           // https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
           if (*name == ReadOnlyRoots(isolate).then_string()) {
