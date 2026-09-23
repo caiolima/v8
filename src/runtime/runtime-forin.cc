@@ -78,11 +78,23 @@ MaybeDirectHandle<Object> HasEnumerableProperty(
       case LookupIterator::MODULE_NAMESPACE: {
         // It triggers evaluation, because this access is like calling
         // [[GetOwnProperty]] on deferred namespace object.
-        if (JSDeferredModuleNamespace::TriggersEvaluation(&it)) {
-          DirectHandle<JSDeferredModuleNamespace> holder =
-              it.GetHolder<JSDeferredModuleNamespace>();
-          JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
-          RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+        DirectHandle<JSModuleNamespace> ns = it.GetHolder<JSModuleNamespace>();
+        if (IsJSDeferredModuleNamespace(*ns)) {
+          Isolate* isolate = it.isolate();
+          DirectHandle<Name> name = it.GetName();
+          // https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
+          if (*name == ReadOnlyRoots(isolate).then_string()) {
+            // At this point we know that a `then` access should return
+            // undefined, because there's no way to install a `then`
+            // property on deferred module namespace.
+            return isolate->factory()->undefined_value();
+          }
+          if (!IsSymbol(*name) &&
+              ns->module()->status() != Module::kEvaluated) {
+            JSDeferredModuleNamespace::EvaluateModuleSync(
+                isolate, it.GetHolder<JSDeferredModuleNamespace>());
+            RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+          }
         }
         continue;
       }
