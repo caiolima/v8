@@ -134,11 +134,23 @@ Maybe<bool> JSReceiver::HasProperty(LookupIterator* it) {
         // TypedArray out-of-bounds access.
         return Just(false);
       case LookupIterator::MODULE_NAMESPACE: {
-        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
-          DirectHandle<JSDeferredModuleNamespace> holder =
-              it->GetHolder<JSDeferredModuleNamespace>();
-          JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
-          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        DirectHandle<JSModuleNamespace> ns = it->GetHolder<JSModuleNamespace>();
+        if (IsJSDeferredModuleNamespace(*ns)) {
+          Isolate* isolate = it->isolate();
+          DirectHandle<Name> name = it->GetName();
+          // https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
+          if (*name == ReadOnlyRoots(isolate).then_string()) {
+            // At this point we know that a `then` access should return
+            // false, because there's no way to install a `then`
+            // property on deferred module namespace.
+            return Just(false);
+          }
+          if (!IsSymbol(*name) &&
+              ns->module()->status() != Module::kEvaluated) {
+            JSDeferredModuleNamespace::EvaluateModuleSync(
+                isolate, it->GetHolder<JSDeferredModuleNamespace>());
+            RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+          }
         }
         JSModuleNamespace::MaybeCountMissingDefaultWithStarExport(it);
         continue;
@@ -804,11 +816,23 @@ Maybe<PropertyAttributes> JSReceiver::GetPropertyAttributes(
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return Just(ABSENT);
       case LookupIterator::MODULE_NAMESPACE: {
-        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
-          DirectHandle<JSDeferredModuleNamespace> holder =
-              it->GetHolder<JSDeferredModuleNamespace>();
-          JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
-          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        DirectHandle<JSModuleNamespace> ns = it->GetHolder<JSModuleNamespace>();
+        if (IsJSDeferredModuleNamespace(*ns)) {
+          Isolate* isolate = it->isolate();
+          DirectHandle<Name> name = it->GetName();
+          // https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
+          if (*name == ReadOnlyRoots(isolate).then_string()) {
+            // At this point we know that a `then` access should return
+            // absent, because there's no way to install a `then`
+            // property on deferred module namespace.
+            return Just(ABSENT);
+          }
+          if (!IsSymbol(*name) &&
+              ns->module()->status() != Module::kEvaluated) {
+            JSDeferredModuleNamespace::EvaluateModuleSync(
+                isolate, it->GetHolder<JSDeferredModuleNamespace>());
+            RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+          }
         }
         continue;
       }
@@ -1062,11 +1086,23 @@ Maybe<bool> JSReceiver::DeleteProperty(LookupIterator* it,
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return Just(true);
       case LookupIterator::MODULE_NAMESPACE: {
-        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
-          DirectHandle<JSDeferredModuleNamespace> holder =
-              it->GetHolder<JSDeferredModuleNamespace>();
-          JSDeferredModuleNamespace::EvaluateModuleSync(it->isolate(), holder);
-          RETURN_EXCEPTION_IF_EXCEPTION(it->isolate());
+        DirectHandle<JSModuleNamespace> ns = it->GetHolder<JSModuleNamespace>();
+        if (IsJSDeferredModuleNamespace(*ns)) {
+          Isolate* isolate = it->isolate();
+          DirectHandle<Name> name = it->GetName();
+          // https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
+          if (*name == ReadOnlyRoots(isolate).then_string()) {
+            // At this point we know that a `then` access should return
+            // true, because there's no way to install a `then`
+            // property on deferred module namespace.
+            return Just(true);
+          }
+          if (!IsSymbol(*name) &&
+              ns->module()->status() != Module::kEvaluated) {
+            JSDeferredModuleNamespace::EvaluateModuleSync(
+                isolate, it->GetHolder<JSDeferredModuleNamespace>());
+            RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+          }
         }
         continue;
       }

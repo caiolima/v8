@@ -243,8 +243,22 @@ static void LookupForRead(LookupIterator* it, bool is_has_property) {
         if (!IsAccessCheckNeeded(*it->GetHolder<JSObject>())) continue;
         return;
       case LookupIterator::MODULE_NAMESPACE: {
-        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
-          return;
+        DirectHandle<JSModuleNamespace> ns = it->GetHolder<JSModuleNamespace>();
+        if (IsJSDeferredModuleNamespace(*ns)) {
+          Isolate* isolate = it->isolate();
+          DirectHandle<Name> name = it->GetName();
+          // https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
+          if (*name == ReadOnlyRoots(isolate).then_string()) {
+            // At this point we know that a `then` access should return, because
+            // there's no way to install a `then` property on deferred module
+            // namespace.
+            return;
+          }
+          if (!IsSymbol(*name) &&
+              ns->module()->status() != Module::kEvaluated) {
+            // The evaluation is going to be then triggered
+            return;
+          }
         }
         JSModuleNamespace::MaybeCountMissingDefaultWithStarExport(it);
         // Once a deferred module is evaluated, we will fallback to perform IC

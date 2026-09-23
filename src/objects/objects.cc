@@ -1362,17 +1362,31 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
         if (it->HasAccess()) continue;
         return JSObject::GetPropertyWithFailedAccessCheck(it);
       case LookupIterator::MODULE_NAMESPACE: {
-        if (JSDeferredModuleNamespace::TriggersEvaluation(it)) {
+        DirectHandle<JSModuleNamespace> ns = it->GetHolder<JSModuleNamespace>();
+        if (IsJSDeferredModuleNamespace(*ns)) {
           Isolate* isolate = it->isolate();
-          JSDeferredModuleNamespace::EvaluateModuleSync(
-              isolate, it->GetHolder<JSDeferredModuleNamespace>());
-          RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+          DirectHandle<Name> name = it->GetName();
+          // https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
+          if (*name == ReadOnlyRoots(isolate).then_string()) {
+            // At this point we know that a `then` access should return
+            // undefined because there's no way to install a `then`
+            // property on deferred module namespace.
+            return it->isolate()->factory()->undefined_value();
+          }
+          if (!IsSymbol(*name) &&
+              ns->module()->status() != Module::kEvaluated) {
+            JSDeferredModuleNamespace::EvaluateModuleSync(
+                isolate, it->GetHolder<JSDeferredModuleNamespace>());
+            RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+          }
         }
+
         JSModuleNamespace::MaybeCountMissingDefaultWithStarExport(it);
         continue;
       }
-      case LookupIterator::ACCESSOR:
+      case LookupIterator::ACCESSOR: {
         return GetPropertyWithAccessor(it);
+      }
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return it->isolate()->factory()->undefined_value();
       case LookupIterator::DATA: {

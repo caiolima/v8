@@ -163,12 +163,23 @@ Tagged<Object> ObjectLookupAccessor(Isolate* isolate,
         // We need to trigger evaluation due to [[GetOwnProperty]].
         // https://tc39.es/ecma262/#sec-object.prototype.__lookupGetter__
         // https://tc39.es/ecma262/#sec-object.prototype.__lookupSetter__
-        if (JSDeferredModuleNamespace::TriggersEvaluation(&it)) {
-          DirectHandle<JSDeferredModuleNamespace> holder =
-              it.GetHolder<JSDeferredModuleNamespace>();
-          JSDeferredModuleNamespace::EvaluateModuleSync(isolate, holder);
-          RETURN_FAILURE_IF_EXCEPTION(isolate);
-          return ReadOnlyRoots(isolate).undefined_value();
+        DirectHandle<JSModuleNamespace> ns = it.GetHolder<JSModuleNamespace>();
+        if (IsJSDeferredModuleNamespace(*ns)) {
+          Isolate* isolate = it.isolate();
+          DirectHandle<Name> name = it.GetName();
+          // https://tc39.es/proposal-defer-import-eval/#sec-IsSymbolLikeNamespaceKey
+          if (*name == ReadOnlyRoots(isolate).then_string()) {
+            // At this point we know that a `then` access should return
+            // undefined, because there's no way to install a `then`
+            // property on deferred module namespace.
+            return ReadOnlyRoots(isolate).undefined_value();
+          }
+          if (!IsSymbol(*name) &&
+              ns->module()->status() != Module::kEvaluated) {
+            JSDeferredModuleNamespace::EvaluateModuleSync(
+                isolate, it.GetHolder<JSDeferredModuleNamespace>());
+            RETURN_FAILURE_IF_EXCEPTION(isolate);
+          }
         }
         continue;
       }
