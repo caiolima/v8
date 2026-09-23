@@ -1384,9 +1384,8 @@ MaybeHandle<Object> Object::GetProperty(LookupIterator* it,
         JSModuleNamespace::MaybeCountMissingDefaultWithStarExport(it);
         continue;
       }
-      case LookupIterator::ACCESSOR: {
+      case LookupIterator::ACCESSOR:
         return GetPropertyWithAccessor(it);
-      }
       case LookupIterator::TYPED_ARRAY_INDEX_NOT_FOUND:
         return it->isolate()->factory()->undefined_value();
       case LookupIterator::DATA: {
