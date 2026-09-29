@@ -65,3 +65,17 @@ assertEquals(undefined, globalThis.fn_module_evaluated);
 const imported_tdz = await import.defer('./mod_then_tdz.mjs');
 assertSame(ns_tdz, imported_tdz);
 assertEquals(undefined, globalThis.tdz_module_evaluated);
+
+// 3. "then" is excluded from the deferred namespace's exports, so it stays
+// absent once the module has been evaluated.
+assertEquals('initialized', ns_fn.tdz_binding);
+assertTrue(globalThis.fn_module_evaluated);
+assertEquals(['tdz_binding'], Reflect.ownKeys(ns_fn).filter(
+    k => typeof k === 'string'));
+assertEquals(['tdz_binding'], Object.keys(ns_fn));
+for (const k in ns_fn) assertEquals('tdz_binding', k);
+assertEquals(undefined, readThenIC(ns_fn));
+assertEquals(undefined, Object.getOwnPropertyDescriptor(ns_fn, 'then'));
+assertEquals(undefined, Object.prototype.__lookupGetter__.call(ns_fn, 'then'));
+assertFalse('then' in ns_fn);
+assertTrue(delete ns_fn.then);
