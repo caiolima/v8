@@ -1006,7 +1006,17 @@ MaybeDirectHandle<JSPromise> SourceTextModule::Evaluate(
   try_catch.SetCaptureMessage(false);
   // TODO(verwaest): Return a bool from InnerModuleEvaluation instead?
   if (InnerModuleEvaluation(isolate, module, &stack, &dfs_index).is_null()) {
-    if (!module->MaybeHandleEvaluationException(isolate, &stack)) return {};
+    if (!module->MaybeHandleEvaluationException(isolate, &stack)) {
+      // On termination we can't reject the capability, since that would call
+      // into the host while the termination exception is pending. Nobody else
+      // holds it, as we return an empty handle, so drop it. A later
+      // Module::Evaluate then creates a fresh promise rejected with the
+      // module's exception, instead of observing a pending capability on a
+      // kErrored module.
+      module->set_top_level_capability(
+          ReadOnlyRoots(isolate).undefined_value());
+      return {};
+    }
     CHECK(try_catch.HasCaught());
 
     // We are clearing the internal exception here because JSPromise::Reject can
