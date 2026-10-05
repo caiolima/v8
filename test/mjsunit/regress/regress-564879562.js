@@ -14,13 +14,7 @@
 globalThis.fn_module_evaluated = true;
 export let tdz_binding = 'initialized';
 export function then(resolve) {
-  // Executed while mod_then_fn.mjs is still kLinked (unevaluated)!
   globalThis.then_ran_while_unevaluated = !globalThis.fn_module_evaluated;
-  try {
-    globalThis.observed_binding = tdz_binding;
-  } catch (e) {
-    globalThis.observed_tdz_error = e;
-  }
   resolve('hijacked-thenable');
 }
 
