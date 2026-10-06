@@ -420,6 +420,7 @@ class V8_EXPORT_PRIVATE Debug {
   bool PerformSideEffectCheckForCallback(Handle<FunctionTemplateInfo> function);
   bool PerformSideEffectCheckForInterceptor(
       DirectHandle<InterceptorInfo> interceptor_info);
+  bool PerformSideEffectCheckForDeferredModuleEvaluation();
 
   bool PerformSideEffectCheckAtBytecode(InterpretedFrame* frame);
   bool PerformSideEffectCheckForObject(DirectHandle<Object> object);
