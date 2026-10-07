@@ -3383,7 +3383,7 @@ bool Debug::PerformSideEffectCheckForInterceptor(
   return false;
 }
 
-bool Debug::PerformSideEffectCheckForDeferredModuleEvaluation() {
+void Debug::FailSideEffectCheckForDeferredModuleEvaluation() {
   RCS_SCOPE(isolate_, RuntimeCallCounterId::kDebugger);
   DCHECK_EQ(isolate_->debug_execution_mode(), DebugInfo::kSideEffects);
 
@@ -3400,7 +3400,6 @@ bool Debug::PerformSideEffectCheckForDeferredModuleEvaluation() {
   side_effect_check_failed_ = true;
   // Throw an uncatchable termination exception.
   isolate_->TerminateExecution();
-  return false;
 }
 
 bool Debug::PerformSideEffectCheckAtBytecode(InterpretedFrame* frame) {

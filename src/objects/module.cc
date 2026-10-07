@@ -540,8 +540,8 @@ void JSDeferredModuleNamespace::EvaluateModuleSync(
   }
 
   // A side-effect-free debug-evaluate must not start the evaluation.
-  if (isolate->debug_execution_mode() == DebugInfo::kSideEffects &&
-      !isolate->debug()->PerformSideEffectCheckForDeferredModuleEvaluation()) {
+  if (isolate->debug_execution_mode() == DebugInfo::kSideEffects) {
+    isolate->debug()->FailSideEffectCheckForDeferredModuleEvaluation();
     return;
   }
 
