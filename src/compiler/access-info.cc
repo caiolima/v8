@@ -1190,6 +1190,34 @@ PropertyAccessInfo AccessInfoFactory::ComputePropertyAccessInfo(
     // The property wasn't found on {map}. Look on the prototype if appropriate.
     DCHECK(!index.is_found());
 
+    // Module namespace objects are exotic, so a name absent from {map} must
+    // not be handled as on an ordinary object.
+    InstanceType instance_type = map.instance_type();
+    if (instance_type == JS_MODULE_NAMESPACE_TYPE ||
+        instance_type == JS_DEFERRED_MODULE_NAMESPACE_TYPE) {
+      // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-set-p-v-receiver
+      // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-defineownproperty-p-desc
+      // [[Set]] and [[DefineOwnProperty]] always fail, even when reached
+      // through the prototype chain, so never transition on the receiver.
+      if (IsAnyStore(access_mode)) return Invalid();
+
+      // "Loads" and "has" checks of absent names on a deferred namespace
+      // trigger evaluation of its module (or throw if evaluation failed). They
+      // can only be folded once the module is evaluated; that state is
+      // monotonic, so no compilation dependency is needed.
+      //
+      // Namespace objects are optimized as prototypes on creation, so their
+      // map is never shared and its PrototypeInfo points back to the
+      // namespace. This lets us find its module even when the namespace is the
+      // receiver (and there is no {holder} yet).
+      if (instance_type == JS_DEFERRED_MODULE_NAMESPACE_TYPE) {
+        OptionalModuleRef module = map.GetNamespaceModule(broker());
+        if (!module.has_value() || module->status() != Module::kEvaluated) {
+          return Invalid();
+        }
+      }
+    }
+
     // Don't search on the prototype chain for special indices in case of
     // integer indexed exotic objects (see ES6 section 9.4.5).
     if (IsJSTypedArrayMap(*map.object()) && name.IsString()) {
