@@ -2451,6 +2451,28 @@ OptionalObjectRef JSArrayRef::GetOwnCowElement(JSHeapBroker* broker,
   return TryMakeRef(broker, result.value());
 }
 
+Module::Status ModuleRef::status() const {
+  // Pairs with the release store in Module::set_status: export cells
+  // initialized before the module became kEvaluated are visible.
+  return object()->status(kAcquireLoad);
+}
+
+OptionalCellRef ModuleRef::LookupExportCell(JSHeapBroker* broker,
+                                            NameRef name) const {
+  // Until the module's first namespace is created, the main thread may still
+  // add the star exports to the table (possibly replacing it). Once the
+  // exports are finalized, the table no longer changes and the acquire load in
+  // ExportsFinalized orders the plain read below after the last write to it.
+  if (!object()->ExportsFinalized(kAcquireLoad)) return {};
+  Tagged<Object> entry = object()->exports()->Lookup(
+      name.object(), Smi::ToInt(Object::GetHash(*name.object())));
+  // The entry can be the hole (no such export) or a not-yet-resolved
+  // SourceTextModuleInfoEntry.
+  Tagged<Cell> cell;
+  if (!TryCast<Cell>(entry, &cell)) return {};
+  return TryMakeRef(broker, cell);
+}
+
 OptionalCellRef SourceTextModuleRef::GetCell(JSHeapBroker* broker,
                                              int cell_index) const {
   return TryMakeRef(broker, object()->GetCell(cell_index));
@@ -2712,6 +2734,30 @@ int SharedFunctionInfoRef::
 int SharedFunctionInfoRef::
     internal_formal_parameter_count_without_receiver_deprecated() const {
   return object()->internal_formal_parameter_count_without_receiver();
+}
+
+OptionalModuleRef MapRef::GetNamespaceModule(JSHeapBroker* broker) const {
+  InstanceType type = instance_type();
+  if (type != JS_MODULE_NAMESPACE_TYPE &&
+      type != JS_DEFERRED_MODULE_NAMESPACE_TYPE) {
+    return {};
+  }
+  DirectHandle<Map> map_handle = object();
+  // On non-prototype maps the prototype_info field aliases the transitions.
+  if (!map_handle->is_prototype_map()) return {};
+  // When the namespace migrates to a new map, the PrototypeInfo moves along
+  // and the old map's field is reset to Smi::zero().
+  Tagged<Object> maybe_proto_info = map_handle->prototype_info(kAcquireLoad);
+  Tagged<PrototypeInfo> proto_info;
+  if (!TryCast<PrototypeInfo>(maybe_proto_info, &proto_info)) return {};
+  Tagged<Object> maybe_namespace = proto_info->module_namespace(kAcquireLoad);
+  Tagged<JSModuleNamespace> module_namespace;
+  if (!TryCast<JSModuleNamespace>(maybe_namespace, &module_namespace)) {
+    return {};
+  }
+  // A namespace's module is set at creation, before the namespace is
+  // published, and never changes afterwards.
+  return TryMakeRef(broker, module_namespace->module());
 }
 
 OptionalMapRef JSObjectRef::GetObjectCreateMap(JSHeapBroker* broker) const {
