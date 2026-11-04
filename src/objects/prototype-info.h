@@ -29,6 +29,13 @@ V8_OBJECT class PrototypeInfo : public Struct {
   inline void set_module_namespace(
       Tagged<UnionOf<JSModuleNamespace, Undefined>> value,
       WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
+  // Background compiler threads follow the map -> PrototypeInfo -> namespace
+  // back pointer, so the namespace is published with a release store.
+  inline Tagged<UnionOf<JSModuleNamespace, Undefined>> module_namespace(
+      AcquireLoadTag) const;
+  inline void set_module_namespace(
+      Tagged<UnionOf<JSModuleNamespace, Undefined>> value, ReleaseStoreTag,
+      WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
 
   inline Tagged<UnionOf<WeakArrayList, Zero>> prototype_users() const;
   inline void set_prototype_users(Tagged<UnionOf<WeakArrayList, Zero>> value,

@@ -187,16 +187,37 @@ V8_OBJECT class Module : public HeapObject {
   inline void set_hash(int value);
 
   inline Status status() const;
+  // Background compiler threads read the status with acquire semantics.
+  // Every write is a release store, so state published before a status
+  // change (e.g. initialized export cells) is visible once that status is.
+  inline Status status(AcquireLoadTag) const;
 
   inline Tagged<UnionOf<Cell, Undefined>> module_namespace() const;
+  inline Tagged<UnionOf<Cell, Undefined>> module_namespace(
+      AcquireLoadTag) const;
   inline void set_module_namespace(
       Tagged<UnionOf<Cell, Undefined>> value,
       WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
+  inline void set_module_namespace(
+      Tagged<UnionOf<Cell, Undefined>> value, ReleaseStoreTag,
+      WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
 
   inline Tagged<UnionOf<Cell, Undefined>> deferred_module_namespace() const;
+  inline Tagged<UnionOf<Cell, Undefined>> deferred_module_namespace(
+      AcquireLoadTag) const;
   inline void set_deferred_module_namespace(
       Tagged<UnionOf<Cell, Undefined>> value,
       WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
+  inline void set_deferred_module_namespace(
+      Tagged<UnionOf<Cell, Undefined>> value, ReleaseStoreTag,
+      WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
+
+  // Variant of ExportsFinalized() for background compiler threads. Once it
+  // returns true, {exports} is final and can be read without synchronizing
+  // with the main thread: GetModuleNamespace fetches the star exports before
+  // it publishes the namespace in the module's namespace cell, with release
+  // stores that the acquire loads here pair with.
+  inline bool ExportsFinalized(AcquireLoadTag) const;
 
   inline Tagged<UnionOf<JSPromise, Undefined>> top_level_capability() const;
 
