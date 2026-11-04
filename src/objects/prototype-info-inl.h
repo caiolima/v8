@@ -45,6 +45,15 @@ void PrototypeInfo::set_module_namespace(
     WriteBarrierMode mode) {
   module_namespace_.store(this, value, mode);
 }
+Tagged<UnionOf<JSModuleNamespace, Undefined>> PrototypeInfo::module_namespace(
+    AcquireLoadTag) const {
+  return module_namespace_.Acquire_Load();
+}
+void PrototypeInfo::set_module_namespace(
+    Tagged<UnionOf<JSModuleNamespace, Undefined>> value, ReleaseStoreTag,
+    WriteBarrierMode mode) {
+  module_namespace_.Release_Store(this, value, mode);
+}
 
 Tagged<UnionOf<WeakArrayList, Zero>> PrototypeInfo::prototype_users() const {
   return prototype_users_.load();
