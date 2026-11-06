@@ -1407,7 +1407,7 @@ class Tuple2Ref : public HeapObjectRef {
   OptionalObjectRef value2(JSHeapBroker* broker) const;
 };
 
-class CellRef : public HeapObjectRef {
+class V8_EXPORT_PRIVATE CellRef : public HeapObjectRef {
  public:
   DEFINE_REF_CONSTRUCTOR(Cell, HeapObjectRef)
 
