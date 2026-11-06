@@ -1366,7 +1366,7 @@ class JSPrimitiveWrapperRef : public JSObjectRef {
   IndirectHandle<JSPrimitiveWrapper> object() const;
 };
 
-class ModuleRef : public HeapObjectRef {
+class V8_EXPORT_PRIVATE ModuleRef : public HeapObjectRef {
  public:
   DEFINE_REF_CONSTRUCTOR(Module, HeapObjectRef)
 
