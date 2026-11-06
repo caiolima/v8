@@ -222,11 +222,16 @@ TEST_F(ConcurrentModuleNamespaceTest, ReadNamespaceBackPointer_MapMigration) {
   for (int i = 0; i < 100; i++) {
     HandleScope inner_scope(isolate);
     DirectHandle<Map> old_map(ns->map(), isolate);
-    DirectHandle<Map> new_map =
-        Map::Normalize(isolate, old_map, old_map->elements_kind(), {},
-                       KEEP_INOBJECT_PROPERTIES, /*use_cache=*/false, "test");
-    new_map->set_is_prototype_map(true);
-    JSObject::MigrateToMap(isolate, ns, new_map);
+    // Alternate between the slow-to-fast migration that ICs trigger through
+    // MakePrototypesFast and normalizing back to dictionary mode.
+    if (old_map->is_dictionary_map()) {
+      JSObject::MigrateSlowToFast(ns, 0, "test");
+    } else {
+      JSObject::NormalizeProperties(isolate, ns, KEEP_INOBJECT_PROPERTIES, 0,
+                                    /*use_cache=*/false, "test");
+    }
+    CHECK_NE(ns->map(), *old_map);
+    CHECK(ns->map()->is_prototype_map());
     CHECK_EQ(old_map->prototype_info(), Smi::zero());
     CHECK_EQ(
         Cast<PrototypeInfo>(ns->map()->prototype_info())->module_namespace(),
