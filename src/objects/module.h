@@ -177,7 +177,7 @@ V8_OBJECT class Module : public HeapObject {
   static Handle<Cell> GetModuleNamespaceCell(
       Isolate* isolate, Handle<Module> module,
       ModuleImportPhase phase = ModuleImportPhase::kEvaluation);
-  static DirectHandle<JSModuleNamespace> GetModuleNamespace(
+  V8_EXPORT_PRIVATE static DirectHandle<JSModuleNamespace> GetModuleNamespace(
       Isolate* isolate, Handle<Module> module,
       ModuleImportPhase phase = ModuleImportPhase::kEvaluation);
 
