@@ -2452,9 +2452,10 @@ OptionalObjectRef JSArrayRef::GetOwnCowElement(JSHeapBroker* broker,
 }
 
 Module::Status ModuleRef::status() const {
-  // Pairs with the release store in Module::set_status: export cells
-  // initialized before the module became kEvaluated are visible.
-  return object()->status(kAcquireLoad);
+  // A relaxed load is enough: the status only moves forward, so a stale value
+  // only makes the compiler more conservative. Callers check the state they
+  // depend on (e.g. export cells for TDZ holes) themselves.
+  return object()->status(kRelaxedLoad);
 }
 
 OptionalCellRef ModuleRef::LookupExportCell(JSHeapBroker* broker,
@@ -2464,13 +2465,16 @@ OptionalCellRef ModuleRef::LookupExportCell(JSHeapBroker* broker,
   // exports are finalized, the table no longer changes and the acquire load in
   // ExportsFinalized orders the plain read below after the last write to it.
   if (!object()->ExportsFinalized(kAcquireLoad)) return {};
+  // Property names reaching the compiler are internalized, so their hash is
+  // already computed.
+  DCHECK(name.IsUniqueName());
   Tagged<Object> entry = object()->exports()->Lookup(
-      name.object(), Smi::ToInt(Object::GetHash(*name.object())));
-  // The entry can be the hole (no such export) or a not-yet-resolved
-  // SourceTextModuleInfoEntry.
-  Tagged<Cell> cell;
-  if (!TryCast<Cell>(entry, &cell)) return {};
-  return TryMakeRef(broker, cell);
+      name.object(), name.object()->hash());
+  // Once exports are finalized (and status == kEvaluated), FinishInstantiate
+  // has already replaced every SourceTextModuleInfoEntry in exports() with a
+  // Cell, so entry can only be the_hole or a Cell.
+  if (i::IsTheHole(entry)) return {};
+  return TryMakeRef(broker, Cast<Cell>(entry));
 }
 
 OptionalCellRef SourceTextModuleRef::GetCell(JSHeapBroker* broker,
@@ -2742,19 +2746,19 @@ OptionalModuleRef MapRef::GetNamespaceModule(JSHeapBroker* broker) const {
       type != JS_DEFERRED_MODULE_NAMESPACE_TYPE) {
     return {};
   }
-  DirectHandle<Map> map_handle = object();
   // On non-prototype maps the prototype_info field aliases the transitions.
-  if (!map_handle->is_prototype_map()) return {};
+  if (!is_prototype_map()) return {};
   // When the namespace migrates to a new map, the PrototypeInfo moves along
   // and the old map's field is reset to Smi::zero().
-  Tagged<Object> maybe_proto_info = map_handle->prototype_info(kAcquireLoad);
+  Tagged<Object> maybe_proto_info = object()->prototype_info(kAcquireLoad);
   Tagged<PrototypeInfo> proto_info;
   if (!TryCast<PrototypeInfo>(maybe_proto_info, &proto_info)) return {};
-  Tagged<Object> maybe_namespace = proto_info->module_namespace(kAcquireLoad);
-  Tagged<JSModuleNamespace> module_namespace;
-  if (!TryCast<JSModuleNamespace>(maybe_namespace, &module_namespace)) {
-    return {};
-  }
+  Tagged<UnionOf<JSModuleNamespace, Undefined>> maybe_namespace =
+      proto_info->module_namespace(kAcquireLoad);
+  if (i::IsUndefined(maybe_namespace)) return {};
+  DCHECK(IsJSModuleNamespace(Cast<HeapObject>(maybe_namespace), kAcquireLoad));
+  Tagged<JSModuleNamespace> module_namespace =
+      UncheckedCast<JSModuleNamespace>(maybe_namespace);
   // A namespace's module is set at creation, before the namespace is
   // published, and never changes afterwards.
   return TryMakeRef(broker, module_namespace->module());

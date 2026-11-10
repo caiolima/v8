@@ -794,19 +794,6 @@ PropertyAccessInfo AccessorAccessInfoHelper(
   InstanceType holder_instance_type = holder_map.instance_type();
   if (holder_instance_type == JS_MODULE_NAMESPACE_TYPE ||
       holder_instance_type == JS_DEFERRED_MODULE_NAMESPACE_TYPE) {
-    OptionalModuleRef module = holder_map.GetNamespaceModule(broker);
-    if (!module.has_value()) return PropertyAccessInfo::Invalid(zone);
-    // A deferred module namespace triggers synchronous evaluation of its
-    // module on the first non-symbol property access. We can only fold the
-    // access into a direct cell load once that module is already evaluated;
-    // before then, the load must go through the slow path that triggers
-    // evaluation. The evaluated state is monotonic (a module never leaves
-    // kEvaluated), so this remains valid for the lifetime of the optimized
-    // code without an extra compilation dependency.
-    if (holder_instance_type == JS_DEFERRED_MODULE_NAMESPACE_TYPE &&
-        module->status() != Module::kEvaluated) {
-      return PropertyAccessInfo::Invalid(zone);
-    }
     if (IsAnyStore(access_mode)) {
       // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-set-p-v-receiver
       // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-defineownproperty-p-desc
@@ -815,10 +802,26 @@ PropertyAccessInfo AccessorAccessInfoHelper(
       // JS.
       return PropertyAccessInfo::Invalid(zone);
     }
+    OptionalModuleRef module = holder_map.GetNamespaceModule(broker);
+    if (!module.has_value()) return PropertyAccessInfo::Invalid(zone);
+    // Only fold accesses to namespaces of evaluated modules. A deferred
+    // namespace evaluates its module on the first non-symbol property access,
+    // so before then the load must take the slow path. Ordinary namespaces are
+    // restricted the same way for simplicity; they are only reachable before
+    // evaluation completes from within the module graph itself. The evaluated
+    // state is monotonic (a module never leaves kEvaluated), so this remains
+    // valid for the lifetime of the optimized code without an extra
+    // compilation dependency.
+    if (module->status() != Module::kEvaluated) {
+      return PropertyAccessInfo::Invalid(zone);
+    }
     OptionalCellRef cell = module->LookupExportCell(broker, name);
     if (!cell.has_value()) return PropertyAccessInfo::Invalid(zone);
     if (IsTdzHole(cell->object()->value(kRelaxedLoad))) {
-      // This module has not been fully initialized yet.
+      // The export belongs to a module that has not been fully initialized
+      // yet. This can happen even though {module} is evaluated: with
+      // top-level await, a module in a cycle becomes evaluated before the
+      // modules that import it run, and it can re-export their bindings.
       return PropertyAccessInfo::Invalid(zone);
     }
     return PropertyAccessInfo::ModuleExport(zone, receiver_map, cell.value(),
@@ -1215,6 +1218,17 @@ PropertyAccessInfo AccessInfoFactory::ComputePropertyAccessInfo(
     // Don't lookup private symbols on the prototype chain.
     if (name.object()->IsAnyPrivate()) {
       return Invalid();
+    }
+
+    // A deferred module namespace evaluates its module on any access with a
+    // string key, even one that is not an export, so the lookup can only
+    // continue past it once the module is evaluated.
+    if (map.instance_type() == JS_DEFERRED_MODULE_NAMESPACE_TYPE &&
+        !name.IsSymbol()) {
+      OptionalModuleRef module = map.GetNamespaceModule(broker());
+      if (!module.has_value() || module->status() != Module::kEvaluated) {
+        return Invalid();
+      }
     }
 
     if (V8_DICT_PROPERTY_CONST_TRACKING_BOOL && holder.has_value()) {

@@ -40,11 +40,6 @@ Tagged<UnionOf<JSModuleNamespace, Undefined>> PrototypeInfo::module_namespace()
     const {
   return module_namespace_.load();
 }
-void PrototypeInfo::set_module_namespace(
-    Tagged<UnionOf<JSModuleNamespace, Undefined>> value,
-    WriteBarrierMode mode) {
-  module_namespace_.store(this, value, mode);
-}
 Tagged<UnionOf<JSModuleNamespace, Undefined>> PrototypeInfo::module_namespace(
     AcquireLoadTag) const {
   return module_namespace_.Acquire_Load();

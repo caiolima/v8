@@ -20,6 +20,28 @@ globalThis.inferredMapEvaluated = true;
 // no TDZ hole before evaluation.
 export var value = 6;
 
+// JS_BUNDLE_MODULE:self-evaluating.mjs
+import * as self from './self-evaluating.mjs';
+// Accesses through the module's own namespace while it is still evaluating are
+// not folded, but still read the (initialized) export.
+export var value = 7;
+{
+  const o = Object.create(self);
+  function load(o) { return o.value; }
+  %PrepareFunctionForOptimization(load);
+  assertEquals(7, load(o));
+  assertEquals(7, load(o));
+  %OptimizeFunctionOnNextCall(load);
+  assertEquals(7, load(o));
+  assertOptimized(load);
+  value = 8;
+  assertEquals(8, load(o));
+}
+
+// JS_BUNDLE_MODULE:deferred-inferred-map-missing.mjs
+globalThis.inferredMapMissingEvaluated = true;
+export var value = 7;
+
 // JS_BUNDLE_MODULE:data.json
 {"answer": 42}
 
@@ -28,7 +50,9 @@ import * as plain from './plain.mjs';
 import defer * as evaluatedNs from './deferred-evaluated.mjs';
 import defer * as unevaluatedNs from './deferred-unevaluated.mjs';
 import defer * as inferredMapNs from './deferred-inferred-map.mjs';
+import defer * as inferredMapMissingNs from './deferred-inferred-map-missing.mjs';
 import defer * as json from './data.json' with {type: 'json'};
+import * as selfEvaluating from './self-evaluating.mjs';
 
 // A found export through a regular namespace prototype is folded.
 {
@@ -40,6 +64,24 @@ import defer * as json from './data.json' with {type: 'json'};
   %OptimizeFunctionOnNextCall(load);
   assertEquals(1, load(o));
   assertOptimized(load);
+}
+
+// Feedback recorded on a namespace map that has since been migrated. The
+// earlier cases made {plain}'s map fast; normalizing {plain} moves its
+// PrototypeInfo to a new dictionary map and resets the old map's field to
+// Smi::zero(). Unlike a fast-to-fast prototype migration, this does not
+// abandon the old map, so the compiler still sees it in {load}'s feedback and
+// must not treat its prototype_info as a PrototypeInfo.
+{
+  function load(ns) { return ns.exported; }
+  %PrepareFunctionForOptimization(load);
+  assertEquals(1, load(plain));
+  assertEquals(1, load(plain));
+  assertTrue(%HasFastProperties(plain));
+  %OptimizeObjectForAddingMultipleProperties(plain, 1);
+  assertFalse(%HasFastProperties(plain));
+  %OptimizeFunctionOnNextCall(load);
+  assertEquals(1, load(plain));
 }
 
 // A found export through an evaluated deferred namespace.
@@ -71,32 +113,60 @@ import defer * as json from './data.json' with {type: 'json'};
   assertEquals(3, load(o));
 }
 
-// The compiler can look up an export of an unevaluated deferred namespace
+// The compiler can look up a property of an unevaluated deferred namespace
 // without any feedback for it: an own-property read emits a map check on {o},
-// and the later {o.value} uses that inferred map instead of its feedback
-// (which only saw {other}). The access must not be folded to a direct cell
-// load: that would skip evaluation and return the var's link-time undefined.
+// and the later {o.value} or {o.missing} uses that inferred map instead of its
+// feedback (which only saw {other}). Neither access may be folded: a direct
+// cell load for {value} would skip evaluation and return the var's link-time
+// undefined, and a not-found {missing} would skip evaluation as well (a
+// deferred namespace evaluates its module on any string key). Each read uses
+// its own module, since whichever runs first evaluates it.
 {
-  const o = Object.create(inferredMapNs);
-  Object.defineProperty(
-      o, 'own', {value: 0, writable: true, enumerable: true, configurable: true});
-  const other = {own: 0, value: 'other'};
-  function load(o, read) {
+  const other = {own: 0, value: 'other', missing: 'other'};
+  function load(o, key) {
     const own = o.own;
-    if (read) return o.value;
+    if (key === 'value') return o.value;
+    if (key === 'missing') return o.missing;
     return own;
   }
+  function makeObject(ns) {
+    const o = Object.create(ns);
+    Object.defineProperty(
+        o, 'own',
+        {value: 0, writable: true, enumerable: true, configurable: true});
+    return o;
+  }
+  const o = makeObject(inferredMapNs);
+  const oMissing = makeObject(inferredMapMissingNs);
   %PrepareFunctionForOptimization(load);
-  assertEquals(0, load(o, false));
-  assertEquals(0, load(o, false));
-  assertEquals('other', load(other, true));
-  assertEquals('other', load(other, true));
+  assertEquals(0, load(o));
+  assertEquals(0, load(oMissing));
+  assertEquals('other', load(other, 'value'));
+  assertEquals('other', load(other, 'missing'));
   %OptimizeFunctionOnNextCall(load);
-  assertEquals(0, load(o, false));
+  assertEquals(0, load(o));
   assertOptimized(load);
+
   assertEquals(undefined, globalThis.inferredMapEvaluated);
-  assertEquals(6, load(o, true));
+  assertEquals(6, load(o, 'value'));
   assertTrue(globalThis.inferredMapEvaluated);
+
+  assertEquals(undefined, globalThis.inferredMapMissingEvaluated);
+  assertEquals(undefined, load(oMissing, 'missing'));
+  assertTrue(globalThis.inferredMapMissingEvaluated);
+}
+
+// Once the module is evaluated, the same access through its namespace is
+// folded.
+{
+  const o = Object.create(selfEvaluating);
+  function load(o) { return o.value; }
+  %PrepareFunctionForOptimization(load);
+  assertEquals(8, load(o));
+  assertEquals(8, load(o));
+  %OptimizeFunctionOnNextCall(load);
+  assertEquals(8, load(o));
+  assertOptimized(load);
 }
 
 // A found export of a deferred JSON (synthetic) module.

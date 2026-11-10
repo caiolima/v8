@@ -187,10 +187,11 @@ V8_OBJECT class Module : public HeapObject {
   inline void set_hash(int value);
 
   inline Status status() const;
-  // Background compiler threads read the status with acquire semantics.
-  // Every write is a release store, so state published before a status
-  // change (e.g. initialized export cells) is visible once that status is.
-  inline Status status(AcquireLoadTag) const;
+  // Background compiler threads read the status with relaxed loads, which pair
+  // with the relaxed stores in set_status. They give no ordering: a reader
+  // must only use the status as a monotonic flag, and must check any other
+  // state it depends on (e.g. export cells) itself.
+  inline Status status(RelaxedLoadTag) const;
 
   inline Tagged<UnionOf<Cell, Undefined>> module_namespace() const;
   inline Tagged<UnionOf<Cell, Undefined>> module_namespace(
