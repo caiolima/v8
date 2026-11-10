@@ -2468,8 +2468,8 @@ OptionalCellRef ModuleRef::LookupExportCell(JSHeapBroker* broker,
   // Property names reaching the compiler are internalized, so their hash is
   // already computed.
   DCHECK(name.IsUniqueName());
-  Tagged<Object> entry = object()->exports()->Lookup(
-      name.object(), name.object()->hash());
+  Tagged<Object> entry =
+      object()->exports()->Lookup(name.object(), name.object()->hash());
   // Once exports are finalized (and status == kEvaluated), FinishInstantiate
   // has already replaced every SourceTextModuleInfoEntry in exports() with a
   // Cell, so entry can only be the_hole or a Cell.
