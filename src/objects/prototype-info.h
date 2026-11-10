@@ -26,9 +26,6 @@ V8_OBJECT class PrototypeInfo : public Struct {
 
   // Accessors
   inline Tagged<UnionOf<JSModuleNamespace, Undefined>> module_namespace() const;
-  inline void set_module_namespace(
-      Tagged<UnionOf<JSModuleNamespace, Undefined>> value,
-      WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
   // Background compiler threads follow the map -> PrototypeInfo -> namespace
   // back pointer, so the namespace is published with a release store.
   inline Tagged<UnionOf<JSModuleNamespace, Undefined>> module_namespace(

@@ -326,11 +326,11 @@ void Module::set_hash(int value) { hash_.store(this, Smi::FromInt(value)); }
 Module::Status Module::status() const {
   return static_cast<Status>(status_.load().value());
 }
-Module::Status Module::status(AcquireLoadTag) const {
-  return static_cast<Status>(status_.Acquire_Load().value());
+Module::Status Module::status(RelaxedLoadTag) const {
+  return static_cast<Status>(status_.Relaxed_Load().value());
 }
 void Module::set_status(int value) {
-  status_.Release_Store(this, Smi::FromInt(value));
+  status_.Relaxed_Store(this, Smi::FromInt(value));
 }
 
 Tagged<UnionOf<Cell, Undefined>> Module::module_namespace() const {

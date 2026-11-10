@@ -119,14 +119,14 @@ class ModuleStatusThread final : public v8::base::Thread {
 
     sema_started_->Signal();
 
-    Module::Status last = module_->status(kAcquireLoad);
+    Module::Status last = module_->status(kRelaxedLoad);
     for (int i = 0; i < kNumIterations || !done_->load(); i++) {
-      Module::Status current = module_->status(kAcquireLoad);
+      Module::Status current = module_->status(kRelaxedLoad);
       CHECK_GE(current, last);
       last = current;
       local_heap.Safepoint();
     }
-    CHECK_EQ(module_->status(kAcquireLoad), Module::kEvaluated);
+    CHECK_EQ(module_->status(kRelaxedLoad), Module::kEvaluated);
   }
 
  private:
