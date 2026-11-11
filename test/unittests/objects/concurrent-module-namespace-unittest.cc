@@ -191,6 +191,8 @@ class ExportsFinalizedThread final : public v8::base::Thread {
 // PrototypeInfo to the new map and leaves Smi::zero() in the old one, while a
 // background thread follows the map -> PrototypeInfo -> namespace back
 // pointer.
+// TODO(caiolima): Remove once --js-nonextensible-applies-to-private is
+// removed, since this situation can no longer happen then.
 TEST_F(ConcurrentModuleNamespaceTest, ReadNamespaceBackPointer_MapMigration) {
   Isolate* isolate = i_isolate();
   HandleScope handle_scope(isolate);
@@ -243,8 +245,6 @@ TEST_F(ConcurrentModuleNamespaceTest, ReadNamespaceBackPointer_MapMigration) {
 
 // The main thread links and evaluates a module while a background thread
 // reads its status.
-// TODO(caiolima): Remove once --js-nonextensible-applies-to-private is
-// removed, since this situation can no longer happen then.
 TEST_F(ConcurrentModuleNamespaceTest, ReadModuleStatus_WhileEvaluating) {
   Isolate* isolate = i_isolate();
   HandleScope handle_scope(isolate);
