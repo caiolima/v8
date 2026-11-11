@@ -1042,7 +1042,11 @@ class V8_EXPORT_PRIVATE MapRef : public HeapObjectRef {
   // For the map of a (deferred) module namespace, returns the namespace's
   // module, found through the PrototypeInfo back pointer. Returns nullopt if
   // this map is not a namespace map, or no longer holds the PrototypeInfo
-  // (e.g. because the namespace migrated to a newer map).
+  // because the namespace migrated to a newer map after private fields were
+  // added to it.
+  // TODO(caiolima): Once --js-nonextensible-applies-to-private is removed,
+  // namespace maps can no longer migrate, so drop the migrated map case and
+  // keep only the CHECK on the PrototypeInfo.
   OptionalModuleRef GetNamespaceModule(JSHeapBroker* broker) const;
 
   bool PrototypesElementsDoNotHaveAccessorsOrThrow(

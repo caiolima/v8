@@ -3,8 +3,19 @@
 // found in the LICENSE file.
 
 // Flags: --bundle --js-defer-import-eval --allow-natives-syntax --turbofan
+// Flags: --no-js-nonextensible-applies-to-private
+
+// The migrated namespace map case below needs to add private fields to a
+// namespace. Remove that case and --no-js-nonextensible-applies-to-private once
+// the flag is removed, since namespace maps can no longer migrate then.
 
 // JS_BUNDLE_MODULE:plain.mjs
+export let exported = 1;
+
+// JS_BUNDLE_MODULE:stamp-target.mjs
+export let exported = 1;
+
+// JS_BUNDLE_MODULE:stamp-calibration.mjs
 export let exported = 1;
 
 // JS_BUNDLE_MODULE:deferred-evaluated.mjs
@@ -47,6 +58,8 @@ export var value = 7;
 
 // JS_BUNDLE_MODULE_ENTRYPOINT
 import * as plain from './plain.mjs';
+import * as stampTarget from './stamp-target.mjs';
+import * as stampCalibration from './stamp-calibration.mjs';
 import defer * as evaluatedNs from './deferred-evaluated.mjs';
 import defer * as unevaluatedNs from './deferred-unevaluated.mjs';
 import defer * as inferredMapNs from './deferred-inferred-map.mjs';
@@ -66,22 +79,49 @@ import * as selfEvaluating from './self-evaluating.mjs';
   assertOptimized(load);
 }
 
-// Feedback recorded on a namespace map that has since been migrated. The
-// earlier cases made {plain}'s map fast; normalizing {plain} moves its
-// PrototypeInfo to a new dictionary map and resets the old map's field to
-// Smi::zero(). Unlike a fast-to-fast prototype migration, this does not
-// abandon the old map, so the compiler still sees it in {load}'s feedback and
-// must not treat its prototype_info as a PrototypeInfo.
+// Feedback recorded on a namespace map that has since been migrated.
+// Namespaces are not extensible, but private fields can still be added to them
+// (see --js-nonextensible-applies-to-private). Each private field moves a fast
+// prototype map to a new fast map, abandoning the old one. Once the descriptor
+// limit is reached, the next private field normalizes the namespace instead:
+// its PrototypeInfo moves to a new dictionary map and the old map's field is
+// reset to Smi::zero(). The old map is not abandoned, so the compiler still
+// sees it in {load}'s feedback and must not treat its prototype_info as a
+// PrototypeInfo.
 {
+  class Base { constructor(o) { return o; } }
+  // Every evaluation of the class expression creates a new private name.
+  function stamp(o) { new (class extends Base { #f = 1; })(o); }
+
+  // A load through a namespace prototype turns its map into a fast prototype
+  // map.
+  function makeFastPrototype(ns) {
+    const child = Object.create(ns);
+    for (let i = 0; i < 3; i++) assertEquals(1, child.exported);
+    assertTrue(%HasFastProperties(ns));
+  }
+
+  // Count how many private fields a namespace takes before it is normalized.
+  makeFastPrototype(stampCalibration);
+  let fastStamps = 0;
+  for (;;) {
+    stamp(stampCalibration);
+    if (!%HasFastProperties(stampCalibration)) break;
+    fastStamps++;
+  }
+
+  makeFastPrototype(stampTarget);
+  for (let i = 0; i < fastStamps; i++) stamp(stampTarget);
+  assertTrue(%HasFastProperties(stampTarget));
+
   function load(ns) { return ns.exported; }
   %PrepareFunctionForOptimization(load);
-  assertEquals(1, load(plain));
-  assertEquals(1, load(plain));
-  assertTrue(%HasFastProperties(plain));
-  %OptimizeObjectForAddingMultipleProperties(plain, 1);
-  assertFalse(%HasFastProperties(plain));
+  assertEquals(1, load(stampTarget));
+  assertEquals(1, load(stampTarget));
+  stamp(stampTarget);
+  assertFalse(%HasFastProperties(stampTarget));
   %OptimizeFunctionOnNextCall(load);
-  assertEquals(1, load(plain));
+  assertEquals(1, load(stampTarget));
 }
 
 // A found export through an evaluated deferred namespace.
