@@ -2758,13 +2758,10 @@ OptionalModuleRef MapRef::GetNamespaceModule(JSHeapBroker* broker) const {
   // be able to assume that namespace maps never migrate. If so, replace the
   // bailout below with a CHECK.
   if (!TryCast<PrototypeInfo>(maybe_proto_info, &proto_info)) return {};
-  Tagged<UnionOf<JSModuleNamespace, Undefined>> maybe_namespace =
-      proto_info->module_namespace(kAcquireLoad);
   // JSModuleNamespace creation stores the back pointer in the PrototypeInfo
   // before the namespace is returned, and it is never cleared afterwards.
-  DCHECK(IsJSModuleNamespace(Cast<HeapObject>(maybe_namespace), kAcquireLoad));
   Tagged<JSModuleNamespace> module_namespace =
-      UncheckedCast<JSModuleNamespace>(maybe_namespace);
+      Cast<JSModuleNamespace>(proto_info->module_namespace(kAcquireLoad));
   // A namespace's module is set at creation, before the namespace is
   // published, and never changes afterwards.
   return TryMakeRef(broker, module_namespace->module());
