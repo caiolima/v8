@@ -2750,32 +2750,24 @@ OptionalModuleRef MapRef::GetNamespaceModule(JSHeapBroker* broker) const {
   if (!is_prototype_map()) return {};
   Tagged<Object> maybe_proto_info = object()->prototype_info(kAcquireLoad);
   Tagged<PrototypeInfo> proto_info;
-  if (v8_flags.js_nonextensible_applies_to_private) {
-    // Namespaces are not extensible, so no property, private fields
-    // included, can be added to them. The only migration left for their maps
-    // is the dictionary-to-fast one done by MakePrototypesFast, and dictionary
-    // maps are rejected before reaching here, so the PrototypeInfo is still
-    // in place.
-    proto_info = CheckedCast<PrototypeInfo>(maybe_proto_info);
-    Tagged<JSModuleNamespace> module_namespace = CheckedCast<JSModuleNamespace>(
-        proto_info->module_namespace(kAcquireLoad));
-    return TryMakeRef(broker, module_namespace->module());
-  } else {
-    // Private fields can still be added to a namespace. When the namespace
-    // migrates to a new map because of that, the PrototypeInfo moves along
-    // and the old map's field is reset to Smi::zero().
-    if (!TryCast<PrototypeInfo>(maybe_proto_info, &proto_info)) return {};
-    Tagged<UnionOf<JSModuleNamespace, Undefined>> maybe_namespace =
-        proto_info->module_namespace(kAcquireLoad);
-    if (i::IsUndefined(maybe_namespace)) return {};
-    DCHECK(
-        IsJSModuleNamespace(Cast<HeapObject>(maybe_namespace), kAcquireLoad));
-    Tagged<JSModuleNamespace> module_namespace =
-        UncheckedCast<JSModuleNamespace>(maybe_namespace);
-    // A namespace's module is set at creation, before the namespace is
-    // published, and never changes afterwards.
-    return TryMakeRef(broker, module_namespace->module());
-  }
+  // Private fields can still be added to a namespace (see
+  // --js-nonextensible-applies-to-private). When the namespace migrates to a
+  // new map because of that, the PrototypeInfo moves along and the old map's
+  // field is reset to Smi::zero().
+  // TODO(caiolima): Once --js-nonextensible-applies-to-private ships, we might
+  // be able to assume that namespace maps never migrate. If so, replace the
+  // bailout below with a CHECK.
+  if (!TryCast<PrototypeInfo>(maybe_proto_info, &proto_info)) return {};
+  Tagged<UnionOf<JSModuleNamespace, Undefined>> maybe_namespace =
+      proto_info->module_namespace(kAcquireLoad);
+  // JSModuleNamespace creation stores the back pointer in the PrototypeInfo
+  // before the namespace is returned, and it is never cleared afterwards.
+  DCHECK(IsJSModuleNamespace(Cast<HeapObject>(maybe_namespace), kAcquireLoad));
+  Tagged<JSModuleNamespace> module_namespace =
+      UncheckedCast<JSModuleNamespace>(maybe_namespace);
+  // A namespace's module is set at creation, before the namespace is
+  // published, and never changes afterwards.
+  return TryMakeRef(broker, module_namespace->module());
 }
 
 OptionalMapRef JSObjectRef::GetObjectCreateMap(JSHeapBroker* broker) const {
