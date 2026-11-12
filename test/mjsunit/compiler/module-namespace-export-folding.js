@@ -6,8 +6,10 @@
 // Flags: --no-js-nonextensible-applies-to-private
 
 // The migrated namespace map case below needs to add private fields to a
-// namespace. Remove that case and --no-js-nonextensible-applies-to-private once
-// the flag is removed, since namespace maps can no longer migrate then.
+// namespace.
+// TODO(caiolima): Once --js-nonextensible-applies-to-private ships, we might be
+// able to assume that namespace maps never migrate. If so, remove that case and
+// --no-js-nonextensible-applies-to-private.
 
 // JS_BUNDLE_MODULE:plain.mjs
 export let exported = 1;

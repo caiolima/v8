@@ -191,8 +191,9 @@ class ExportsFinalizedThread final : public v8::base::Thread {
 // PrototypeInfo to the new map and leaves Smi::zero() in the old one, while a
 // background thread follows the map -> PrototypeInfo -> namespace back
 // pointer.
-// TODO(caiolima): Remove once --js-nonextensible-applies-to-private is
-// removed, since this situation can no longer happen then.
+// TODO(caiolima): Once --js-nonextensible-applies-to-private ships, we might
+// be able to assume that namespace maps never migrate. If so, remove this
+// test.
 TEST_F(ConcurrentModuleNamespaceTest, ReadNamespaceBackPointer_MapMigration) {
   Isolate* isolate = i_isolate();
   HandleScope handle_scope(isolate);
