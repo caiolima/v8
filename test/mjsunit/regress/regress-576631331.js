@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Flags: --bundle --js-defer-import-eval
-
-// This is the original reproduction from the bug report. It relies on natural
-// tier-up instead of natives syntax, so it may not hit optimized code on every
-// run; the deterministic variants are in
-// regress-module-namespace-inline-access-*.js.
+// Flags: --bundle --js-defer-import-eval --allow-natives-syntax --turbofan
 
 // JS_BUNDLE_MODULE:mod1.mjs
 export const exported = 1;
@@ -35,12 +30,10 @@ function storeFoo(o, v) {
   o.foo = v;
 }
 
-for (let i = 0; i < 5000; i++) {
-  const o = Object.create(ns);
-  try {
-    storeFoo(o, 99);
-  } catch (e) {}
-}
+%PrepareFunctionForOptimization(storeFoo);
+assertThrows(() => storeFoo(Object.create(ns), 99), TypeError);
+assertThrows(() => storeFoo(Object.create(ns), 99), TypeError);
+%OptimizeFunctionOnNextCall(storeFoo);
 
 const receiver = Object.create(ns);
 assertThrows(() => storeFoo(receiver, 99), TypeError);
@@ -54,11 +47,10 @@ function getNonExistent(o, doRead) {
   return o.nonExistent;
 }
 
-const dummyObjs = [{a: 1}, {b: 2}, {c: 3}, {d: 4}, {e: 5}, {f: 6}];
-for (let i = 0; i < 100; i++) {
-  for (const obj of dummyObjs) {
-    getNonExistent(obj, true);
-  }
+// Make the load in {getNonExistent} megamorphic.
+%PrepareFunctionForOptimization(getNonExistent);
+for (const obj of [{a: 1}, {b: 2}, {c: 3}, {d: 4}, {e: 5}, {f: 6}]) {
+  getNonExistent(obj, true);
 }
 
 function caller(o, doRead) {
@@ -66,9 +58,11 @@ function caller(o, doRead) {
   return getNonExistent(o, doRead);
 }
 
-for (let i = 0; i < 5000; i++) {
-  caller(dns, false);
-}
+%PrepareFunctionForOptimization(caller);
+caller(dns, false);
+caller(dns, false);
+%OptimizeFunctionOnNextCall(caller);
+caller(dns, false);
 
 assertEquals(undefined, globalThis.deferred_evaluated);
 assertEquals(undefined, caller(dns, true));
