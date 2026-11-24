@@ -140,6 +140,20 @@ V8_OBJECT class Module : public HeapObject {
   // i.e. has a top-level await.
   V8_WARN_UNUSED_RESULT bool IsGraphAsync(Isolate* isolate) const;
 
+  // Returns true if this module and its whole strongly connected component
+  // finished evaluating without an error, i.e. the spec's
+  // IsModuleSCCEvaluated(module) is true and module.[[CycleRoot]] has no
+  // [[EvaluationError]]. The module's own status is not enough for that: with
+  // top-level await in a cycle, a module is already kEvaluated while its cycle
+  // root is still kEvaluatingAsync, and it stays kEvaluated if the root fails
+  // afterwards.
+  //
+  // In this state EvaluateModuleSync is an unobservable no-op, which is what
+  // lets a deferred namespace be accessed like an ordinary one. The state is
+  // final, so nothing that relies on it needs to be invalidated. Safe to call
+  // from background compiler threads, where a stale read only yields false.
+  V8_WARN_UNUSED_RESULT bool IsSCCEvaluatedSuccessfully() const;
+
   struct UserResolveCallbacks {
     v8::Module::ResolveModuleCallback module_callback = nullptr;
     v8::Module::ResolveSourceCallback source_callback = nullptr;
