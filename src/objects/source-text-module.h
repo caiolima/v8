@@ -159,8 +159,6 @@ V8_OBJECT class SourceTextModule : public Module {
   inline Tagged<UnionOf<SourceTextModule, TheHole>> cycle_root(
       AcquireLoadTag) const;
   inline void set_cycle_root(Tagged<UnionOf<SourceTextModule, TheHole>> value,
-                             WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
-  inline void set_cycle_root(Tagged<UnionOf<SourceTextModule, TheHole>> value,
                              ReleaseStoreTag,
                              WriteBarrierMode mode = UPDATE_WRITE_BARRIER);
 

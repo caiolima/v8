@@ -139,10 +139,6 @@ Tagged<UnionOf<SourceTextModule, TheHole>> SourceTextModule::cycle_root(
   return cycle_root_.Acquire_Load();
 }
 void SourceTextModule::set_cycle_root(
-    Tagged<UnionOf<SourceTextModule, TheHole>> value, WriteBarrierMode mode) {
-  cycle_root_.store(this, value, mode);
-}
-void SourceTextModule::set_cycle_root(
     Tagged<UnionOf<SourceTextModule, TheHole>> value, ReleaseStoreTag,
     WriteBarrierMode mode) {
   cycle_root_.Release_Store(this, value, mode);
