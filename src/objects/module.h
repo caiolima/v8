@@ -148,11 +148,14 @@ V8_OBJECT class Module : public HeapObject {
   // root is still kEvaluatingAsync, and it stays kEvaluated if the root fails
   // afterwards.
   //
-  // In this state EvaluateModuleSync is an unobservable no-op, which is what
-  // lets a deferred namespace be accessed like an ordinary one. The state is
-  // final, so nothing that relies on it needs to be invalidated. Safe to call
-  // from background compiler threads, where a stale read only yields false.
+  // Safe to call from background compiler threads, where a stale read only
+  // yields false.
   V8_WARN_UNUSED_RESULT bool IsSCCEvaluatedSuccessfully() const;
+
+  // Returns the status of this module's [[CycleRoot]], or the module's own
+  // status if it has none: a module only gets a cycle root once its strongly
+  // connected component leaves the DFS stack of its evaluation.
+  Status GetCycleRootStatus() const;
 
   struct UserResolveCallbacks {
     v8::Module::ResolveModuleCallback module_callback = nullptr;

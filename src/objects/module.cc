@@ -776,16 +776,25 @@ bool Module::IsSCCEvaluatedSuccessfully() const {
   DisallowGarbageCollection no_gc;
   if (status(kRelaxedLoad) != kEvaluated) return false;
   // A synthetic module has no dependencies, so it is its own cycle root.
-  if (!Is<SourceTextModule>(this)) return true;
+  Tagged<SourceTextModule> source_text_module;
+  if (!TryCast(Tagged<Module>(this), &source_text_module)) return true;
   // On the main thread an evaluated module always has a cycle root. A
   // background thread can still observe the hole here, as the relaxed status
   // load above is not ordered with the store to the cycle root.
   Tagged<SourceTextModule> cycle_root;
-  if (!TryCast(Cast<SourceTextModule>(this)->cycle_root(kAcquireLoad),
-               &cycle_root)) {
+  if (!TryCast(source_text_module->cycle_root(kAcquireLoad), &cycle_root)) {
     return false;
   }
   return cycle_root->status(kRelaxedLoad) == kEvaluated;
+}
+
+Module::Status Module::GetCycleRootStatus() const {
+  DisallowGarbageCollection no_gc;
+  Tagged<SourceTextModule> source_text_module;
+  if (!TryCast(Tagged<Module>(this), &source_text_module)) return status();
+  Tagged<SourceTextModule> cycle_root;
+  if (!TryCast(source_text_module->cycle_root(), &cycle_root)) return status();
+  return cycle_root->status();
 }
 
 bool Module::IsGraphAsync(Isolate* isolate) const {
